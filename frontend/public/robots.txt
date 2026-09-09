@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nyumbadirect.co.ke/sitemap.xml
+Sitemap: https://www.nyumbadirect.co.ke/sitemap.xml
