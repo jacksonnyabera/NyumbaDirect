@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nyumba-direct-rust.vercel.app/sitemap.xml
+Sitemap: https://nyumbadirect.co.ke/sitemap.xml
