@@ -677,6 +677,41 @@ textarea {
   }
 }
 
+@media (max-width: 920px) {
+  .auth-page {
+    padding: 40px 14px;
+  }
+
+  .auth-card,
+  .auth-card-wide {
+    width: min(100%, 680px);
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 24px 18px;
+    border-radius: 18px;
+  }
+
+  .auth-card-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .auth-intro h1 {
+    font-size: 30px;
+  }
+
+  .auth-button {
+    height: 46px;
+  }
+}
+
 .success-message {
   background: #e8f7ee;
   color: #168345;
@@ -3975,13 +4010,21 @@ textarea {
 
 @media (max-width: 700px) {
 
+  .navbar {
+    position: sticky;
+  }
+
   .navbar-inner {
     min-height: 65px;
     padding: 0 16px;
+    flex-wrap: wrap;
+    gap: 14px;
   }
 
   .nav-links {
     gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .nav-links a:not(.register-btn) {
@@ -4000,17 +4043,25 @@ textarea {
     font-size: 22px;
   }
 
+  .brand-logo-image {
+    width: clamp(130px, 34vw, 160px);
+  }
+
   .hero {
     padding: 45px 18px;
   }
 
   .hero h1 {
-    font-size: 50px;
+    font-size: clamp(42px, 12vw, 50px);
     letter-spacing: -2px;
   }
 
   .hero-text {
     font-size: 16px;
+  }
+
+  .hero-actions {
+    flex-wrap: wrap;
   }
 
   .hero-trust {
