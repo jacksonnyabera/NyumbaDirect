@@ -38,8 +38,8 @@ function Navigation() {
       <div className="navbar-inner">
 
         {/* BRAND */}
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
+        <Link to="/" className="logo brand-logo" aria-label="NyumbaDirect Kenya">
+          <img src="/nyumbadirect-logo.svg" alt="NyumbaDirect" className="brand-logo-image" />
         </Link>
 
         {/* MAIN NAVIGATION */}
@@ -457,9 +457,10 @@ function Home() {
 
             <Link
               to="/"
-              className="logo footer-logo"
+              className="logo footer-logo brand-logo brand-logo-footer"
+              aria-label="NyumbaDirect Kenya"
             >
-              Nyumba<span>Direct</span>
+              <img src="/nyumbadirect-logo.svg" alt="NyumbaDirect" className="brand-logo-image brand-logo-image-footer" />
             </Link>
 
             <p>

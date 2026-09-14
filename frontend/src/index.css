@@ -10,6 +10,22 @@ body {
   color: #0f172a;
 }
 
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.brand-logo-image {
+  width: clamp(150px, 14vw, 210px);
+  height: auto;
+  display: block;
+}
+
+.brand-logo-footer .brand-logo-image {
+  width: 170px;
+}
+
 button,
 input,
 select,
