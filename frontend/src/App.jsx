@@ -107,6 +107,11 @@ function Home() {
 
           <div className="hero-content">
 
+            <div className="hero-brand-row">
+              <img src="/nyumbadirect-logo.svg" alt="NyumbaDirect Kenya" className="hero-brand-logo" />
+              <span className="hero-brand-name">NyumbaDirect Kenya</span>
+            </div>
+
             <div className="hero-badge">
               <span>✓</span>
               Trusted property marketplace
