@@ -3571,6 +3571,130 @@ input {
 }
 
 
+/* ---------- AI ASSISTANT ---------- */
+
+.ai-assistant {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2000;
+}
+
+.ai-assistant-toggle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #0f766e;
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+}
+
+.ai-assistant-toggle:hover {
+  background: #115e59;
+}
+
+.ai-help-panel {
+  position: absolute;
+  right: 0;
+  bottom: 72px;
+  width: min(380px, calc(100vw - 48px));
+  background: white;
+  border: 1px solid #d1fae5;
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+}
+
+.ai-help-header {
+  padding: 16px 18px;
+  background: #0f766e;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-help-kicker {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.ai-help-header h3 {
+  margin: 6px 0 0;
+  font-size: 20px;
+}
+
+.ai-help-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  color: #0f766e;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.ai-help-chat {
+  padding: 16px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+
+.ai-help-message {
+  padding: 11px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.ai-help-user {
+  background: #dbeafe;
+  color: #1e3a8a;
+  margin-left: 30px;
+}
+
+.ai-help-assistant {
+  background: #ecfdf5;
+  color: #064e3b;
+  margin-right: 30px;
+}
+
+.ai-help-form {
+  padding: 14px;
+  background: white;
+  display: flex;
+  gap: 10px;
+}
+
+.ai-help-form input {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.ai-help-form button {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
 /* ---------- RESPONSIVE ---------- */
 
 @media (max-width: 900px) {

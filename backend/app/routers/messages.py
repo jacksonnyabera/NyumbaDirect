@@ -9,6 +9,8 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.property import Property
 from app.models.user import User
+from app.services.ai_assistant import AIAssistantService
+from app.services.notifications import NotificationService
 
 
 router = APIRouter(
@@ -152,6 +154,25 @@ def send_message(
 
     db.commit()
     db.refresh(message)
+
+    property_obj = db.scalar(
+        select(Property).where(Property.id == conversation.property_id)
+    )
+    landlord = db.scalar(
+        select(User).where(User.id == conversation.landlord_id)
+    )
+
+    if landlord and landlord.email and property_obj:
+        NotificationService.send_property_inquiry_email(
+            to_email=landlord.email,
+            house_hunter_name=current_user.full_name,
+            property_title=property_obj.title,
+        )
+
+    intent = AIAssistantService.classify_intent(content)
+    print(
+        f"AI intent detected: {intent.intent} confidence={intent.confidence} reply={intent.reply}"
+    )
 
     return message
 

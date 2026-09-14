@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,9 +13,12 @@ from app.schemas.user import (
 )
 from app.security import (
     create_access_token,
+    create_email_verification_token,
+    decode_email_verification_token,
     hash_password,
     verify_password,
 )
+from app.services.notifications import NotificationService
 
 
 router = APIRouter(
@@ -107,7 +110,55 @@ def register_user(
     db.commit()
     db.refresh(user)
 
+    verification_token = create_email_verification_token(user.email)
+    NotificationService.send_verification_email(
+        to_email=user.email,
+        name=user.full_name,
+        token=verification_token,
+    )
+
     return user
+
+
+@router.get(
+    "/verify-email",
+    status_code=status.HTTP_200_OK,
+)
+def verify_email(
+    token: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    payload = decode_email_verification_token(token)
+
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token.",
+        )
+
+    email = payload.get("sub")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification token.",
+        )
+
+    user = db.scalar(select(User).where(User.email == email))
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    user.is_verified = True
+    user.is_active = True
+    db.commit()
+
+    return {
+        "message": "Email verified successfully.",
+        "status": "verified",
+    }
 
 
 @router.post(

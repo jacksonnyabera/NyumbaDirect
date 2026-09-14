@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -611,6 +611,106 @@ function AppSEO() {
   return null;
 }
 
+function AIHelpAssistant() {
+  const [open, setOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [answers, setAnswers] = useState([
+    {
+      from: "assistant",
+      text: "Hi, I’m NyumbaDirect AI Help. Ask about rents, homes, locations or listing steps.",
+    },
+  ]);
+
+  const getQuickAnswer = (text) => {
+    const q = text.toLowerCase();
+
+    if (q.includes("rent") || q.includes("price") || q.includes("cost") || q.includes("monthly")) {
+      return "You can filter homes by rent and compare monthly rent, deposit, and property type on the properties page.";
+    }
+
+    if (q.includes("house") || q.includes("home") || q.includes("property") || q.includes("listing")) {
+      return "Browse verified properties, then contact the landlord or property manager directly through the messages page.";
+    }
+
+    if (q.includes("location") || q.includes("nairobi") || q.includes("mombasa") || q.includes("kisumu")) {
+      return "Search by town, county, area, or estate to find homes in Nairobi, Mombasa, Kisumu, and other Kenyan locations.";
+    }
+
+    if (q.includes("login") || q.includes("account") || q.includes("register") || q.includes("signup")) {
+      return "Create a NyumbaDirect account as a house hunter or landlord/manager, then add or manage rental listings from the dashboard.";
+    }
+
+    return "I can help you search homes, compare rent, check locations, and guide you through listing or messaging steps on NyumbaDirect.";
+  };
+
+  const handleAsk = () => {
+    const cleanQuestion = question.trim();
+    if (!cleanQuestion) return;
+
+    const newAnswer = getQuickAnswer(cleanQuestion);
+
+    setAnswers((previous) => [
+      ...previous,
+      { from: "user", text: cleanQuestion },
+      { from: "assistant", text: newAnswer },
+    ]);
+
+    setQuestion("");
+  };
+
+  return (
+    <div className="ai-assistant">
+      <button
+        type="button"
+        className="ai-assistant-toggle"
+        onClick={() => setOpen((value) => !value)}
+        aria-label="Open NyumbaDirect AI help"
+      >
+        {open ? "×" : "AI"}
+      </button>
+
+      {open && (
+        <div className="ai-help-panel">
+          <div className="ai-help-header">
+            <div>
+              <span className="ai-help-kicker">NyumbaDirect AI</span>
+              <h3>Home Help</h3>
+            </div>
+            <button type="button" className="ai-help-close" onClick={() => setOpen(false)}>
+              ×
+            </button>
+          </div>
+
+          <div className="ai-help-chat">
+            {answers.map((item, index) => (
+              <div key={index} className={`ai-help-message ai-help-${item.from}`}>
+                {item.text}
+              </div>
+            ))}
+          </div>
+
+          <div className="ai-help-form">
+            <input
+              type="text"
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder="Ask about homes, rent or Kenya locations"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  handleAsk();
+                }
+              }}
+            />
+            <button type="button" onClick={handleAsk}>
+              Ask
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -681,6 +781,8 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
+
+      <AIHelpAssistant />
 
     </BrowserRouter>
   );

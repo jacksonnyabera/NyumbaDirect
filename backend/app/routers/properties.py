@@ -14,6 +14,7 @@ from app.schemas.property import (
     PropertyResponse,
     PropertyUpdate,
 )
+from app.services.notifications import NotificationService
 
 
 router = APIRouter(
@@ -50,6 +51,13 @@ def create_property(
     db.add(new_property)
     db.commit()
     db.refresh(new_property)
+
+    NotificationService.send_property_created_email(
+        to_email=current_user.email,
+        title=new_property.title,
+        town=new_property.town,
+        rent=f"KSh {new_property.monthly_rent:.2f}",
+    )
 
     return new_property
 
@@ -240,6 +248,13 @@ def get_property(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Property not found.",
+        )
+
+    if property_obj.owner and property_obj.owner.email:
+        NotificationService.send_profile_visit_email(
+            to_email=property_obj.owner.email,
+            owner_name=property_obj.owner.full_name,
+            property_title=property_obj.title,
         )
 
     return property_obj
