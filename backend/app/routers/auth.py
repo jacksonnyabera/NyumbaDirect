@@ -27,6 +27,14 @@ router = APIRouter(
 )
 
 
+def require_gmail_email(email: str) -> None:
+    if not email.lower().endswith("@gmail.com"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please use a Gmail account to register or login.",
+        )
+
+
 ALLOWED_REGISTRATION_ROLES = {
     "HOUSE_HUNTER",
     "LANDLORD",
@@ -44,6 +52,7 @@ def register_user(
     db: Session = Depends(get_db),
 ):
     email = user_data.email.strip().lower()
+    require_gmail_email(email)
     phone_number = user_data.phone_number.strip()
     full_name = user_data.full_name.strip()
     role = user_data.role.strip().upper()
@@ -170,6 +179,7 @@ def login_user(
     db: Session = Depends(get_db),
 ):
     email = login_data.email.strip().lower()
+    require_gmail_email(email)
 
     user = db.scalar(
         select(User).where(User.email == email)
