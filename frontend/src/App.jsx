@@ -307,6 +307,114 @@ function Home() {
 
         </section>
 
+        {/* MARKET STATS */}
+        <section className="stats-strip">
+          <div className="stats-grid">
+
+            <div className="stat-card">
+              <span className="stat-number">2k+</span>
+              <span className="stat-label">Verified Listings</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-number">8+</span>
+              <span className="stat-label">Major Kenyan Towns</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-number">24hr</span>
+              <span className="stat-label">Direct Response</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-number">0%</span>
+              <span className="stat-label">Hidden Agent Fees</span>
+            </div>
+
+          </div>
+        </section>
+
+        {/* CITY GUIDE */}
+        <section className="city-guide">
+          <div className="section-heading centered-heading">
+            <p className="eyebrow">
+              POPULAR KENYA LOCATIONS
+            </p>
+            <h2>
+              Find a home in the place that fits your life
+            </h2>
+            <p>
+              Discover quality rental options across Kenya’s most active property markets.
+            </p>
+          </div>
+
+          <div className="city-grid">
+            <div className="city-card city-card-dark">
+              <span className="city-chip">
+                Nairobi
+              </span>
+              <h3>Kilimani & Westlands</h3>
+              <p>Professionally managed apartments and family homes near work, study and lifestyle hubs.</p>
+              <Link to="/properties" className="city-link">
+                Explore Nairobi <span>→</span>
+              </Link>
+            </div>
+
+            <div className="city-card">
+              <span className="city-chip">
+                Mombasa
+              </span>
+              <h3>Coastal Living</h3>
+              <p>Homes near the coast, business districts and relaxed neighbourhoods.</p>
+              <Link to="/properties" className="city-link">
+                Explore Mombasa <span>→</span>
+              </Link>
+            </div>
+
+            <div className="city-card">
+              <span className="city-chip">
+                Kisumu
+              </span>
+              <h3>Lake Region Rentals</h3>
+              <p>Comfortable homes, family apartments and town rentals with local convenience.</p>
+              <Link to="/properties" className="city-link">
+                Explore Kisumu <span>→</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* PROCESS / HOW IT WORKS */}
+        <section className="process-section">
+          <div className="section-heading centered-heading">
+            <p className="eyebrow">
+              HOW IT WORKS
+            </p>
+            <h2>
+              From search to keys in a few steps
+            </h2>
+          </div>
+
+          <div className="process-grid">
+            <div className="process-card">
+              <span className="process-number">01</span>
+              <h3>Search & Shortlist</h3>
+              <p>Filter rentals by location, price, bedrooms and property type.</p>
+            </div>
+
+            <div className="process-card">
+              <span className="process-number">02</span>
+              <h3>Verify & Compare</h3>
+              <p>Check property details, photos, location and owner information.</p>
+            </div>
+
+            <div className="process-card">
+              <span className="process-number">03</span>
+              <h3>Connect Directly</h3>
+              <p>Message landlords or property managers quickly and safely.</p>
+            </div>
+          </div>
+        </section>
 
         {/* CTA */}
         <section className="home-cta">
