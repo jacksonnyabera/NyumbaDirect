@@ -1,0 +1,17 @@
+{
+  "name": "NyumbaDirect Kenya",
+  "short_name": "NyumbaDirect",
+  "description": "Kenyan housing marketplace for finding homes directly from landlords and property managers.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef6f1",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
