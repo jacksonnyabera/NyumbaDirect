@@ -508,67 +508,108 @@ function getRouteMeta(pathname) {
   const routeMap = {
     "/": {
       title: "NyumbaDirect Kenya | Find Houses Directly from Landlords",
-      description: "NyumbaDirect Kenya helps you find verified houses, apartments and rental properties directly from landlords and property managers across Kenya.",
-      keywords: "NyumbaDirect, houses for rent in Kenya, houses for rent, apartments in Kenya, Nairobi houses, rental houses Kenya, apartments for rent Kenya, houses directly from landlords",
+      description:
+        "NyumbaDirect Kenya helps you find houses, apartments and rental properties directly from landlords and property managers across Kenya.",
+      keywords:
+        "NyumbaDirect, houses for rent in Kenya, apartments for rent Kenya, Nairobi houses, rental houses Kenya, houses directly from landlords",
+      index: true,
     },
-    "/login": {
-      title: "Login to NyumbaDirect Kenya",
-      description: "Log in to NyumbaDirect Kenya to manage saved rentals, properties and landlord conversations.",
-      keywords: "login NyumbaDirect Kenya, NyumbaDirect login, rental platform Kenya",
-    },
-    "/register": {
-      title: "Create a NyumbaDirect Kenya Account",
-      description: "Create a NyumbaDirect Kenya account to save homes, contact landlords and manage rental listings.",
-      keywords: "register NyumbaDirect Kenya, NyumbaDirect account",
-    },
+
     "/properties": {
       title: "Browse Rental Homes in Kenya | NyumbaDirect",
-      description: "Browse verified houses, apartments and rental properties available across Kenya on NyumbaDirect.",
-      keywords: "houses for rent Kenya, apartments for rent Kenya, Kenyan rental homes",
+      description:
+        "Browse houses, apartments and rental properties available across Kenya on NyumbaDirect. Search by location, rent, bedrooms and property type.",
+      keywords:
+        "houses for rent Kenya, apartments for rent Kenya, rental homes Kenya, Nairobi houses for rent, NyumbaDirect properties",
+      index: true,
     },
-    "/properties/:propertyId": {
-      title: "Property Details | NyumbaDirect Kenya",
-      description: "Explore property details, rent information and direct landlord contact details on NyumbaDirect.",
-      keywords: "rental property details Kenya, NyumbaDirect property listing",
+
+    "/login": {
+      title: "Login | NyumbaDirect Kenya",
+      description:
+        "Log in to your NyumbaDirect Kenya account.",
+      keywords: "",
+      index: false,
     },
+
+    "/register": {
+      title: "Create an Account | NyumbaDirect Kenya",
+      description:
+        "Create a NyumbaDirect Kenya account to save homes, contact landlords and manage rental listings.",
+      keywords: "",
+      index: false,
+    },
+
     "/dashboard": {
       title: "Dashboard | NyumbaDirect Kenya",
-      description: "Manage your NyumbaDirect account, property listings and saved rental searches.",
-      keywords: "NyumbaDirect dashboard, landlord dashboard Kenya",
+      description:
+        "Manage your NyumbaDirect account and rental properties.",
+      keywords: "",
+      index: false,
     },
+
     "/dashboard/add-property": {
-      title: "Add a Property | NyumbaDirect Kenya",
-      description: "Publish a rental property listing on NyumbaDirect Kenya and connect directly with tenants.",
-      keywords: "add property NyumbaDirect Kenya, list rental property",
+      title: "Add Property | NyumbaDirect Kenya",
+      description:
+        "Create and publish a rental property listing on NyumbaDirect Kenya.",
+      keywords: "",
+      index: false,
     },
-    "/dashboard/edit-property/:propertyId": {
-      title: "Edit Property | NyumbaDirect Kenya",
-      description: "Update and manage a rental property listing on NyumbaDirect.",
-      keywords: "edit property, NyumbaDirect property management",
-    },
+
     "/messages": {
       title: "Messages | NyumbaDirect Kenya",
-      description: "Chat directly with landlords and property managers about rental homes in Kenya.",
-      keywords: "NyumbaDirect messages, landlord chat Kenya",
+      description:
+        "Manage your conversations with landlords and property managers on NyumbaDirect.",
+      keywords: "",
+      index: false,
     },
-    "/messages/:conversationId": {
-      title: "Conversation | NyumbaDirect Kenya",
-      description: "View and continue your conversation with a landlord or property manager.",
-      keywords: "NyumbaDirect conversation, rental direct messages",
-    },
+
     "/saved-homes": {
       title: "Saved Homes | NyumbaDirect Kenya",
-      description: "View your saved rental properties and shortlist your next home on NyumbaDirect.",
-      keywords: "saved homes NyumbaDirect Kenya, shortlist rental properties",
+      description:
+        "View your saved rental properties on NyumbaDirect Kenya.",
+      keywords: "",
+      index: false,
     },
   };
 
-  const normalizedPath = pathname.startsWith("/properties/")
-    ? "/properties/:propertyId"
-    : pathname;
+  // Individual property pages
+  if (pathname.startsWith("/properties/")) {
+    return {
+      title: "Rental Property | NyumbaDirect Kenya",
+      description:
+        "View rental property details, location, rent and property information on NyumbaDirect Kenya.",
+      keywords:
+        "rental property Kenya, house for rent Kenya, apartment for rent Kenya, NyumbaDirect",
+      index: true,
+    };
+  }
 
-  return routeMap[normalizedPath] || routeMap["/"];
+  // Individual conversation pages
+  if (pathname.startsWith("/messages/")) {
+    return {
+      title: "Conversation | NyumbaDirect Kenya",
+      description:
+        "Continue your conversation with a landlord or property manager on NyumbaDirect.",
+      keywords: "",
+      index: false,
+    };
+  }
+
+  // Edit property pages
+  if (pathname.startsWith("/dashboard/edit-property/")) {
+    return {
+      title: "Edit Property | NyumbaDirect Kenya",
+      description:
+        "Update and manage your rental property listing on NyumbaDirect Kenya.",
+      keywords: "",
+      index: false,
+    };
+  }
+
+  return routeMap[pathname] || routeMap["/"];
 }
+
 
 function AppSEO() {
   const location = useLocation();
@@ -576,42 +617,121 @@ function AppSEO() {
   useEffect(() => {
     const meta = getRouteMeta(location.pathname);
 
+    const siteUrl = "https://www.nyumbadirect.co.ke";
+
+    const currentUrl =
+      location.pathname === "/"
+        ? `${siteUrl}/`
+        : `${siteUrl}${location.pathname}`;
+
+    // Page title
     document.title = meta.title;
 
-    const description = document.querySelector('meta[name="description"]');
-    if (description) {
-      description.setAttribute("content", meta.description);
+    // Description
+    let description = document.querySelector(
+      'meta[name="description"]'
+    );
+
+    if (!description) {
+      description = document.createElement("meta");
+      description.setAttribute("name", "description");
+      document.head.appendChild(description);
     }
 
-    const keywords = document.querySelector('meta[name="keywords"]');
-    if (keywords) {
-      keywords.setAttribute("content", meta.keywords);
+    description.setAttribute("content", meta.description);
+
+    // Keywords
+    let keywords = document.querySelector(
+      'meta[name="keywords"]'
+    );
+
+    if (!keywords) {
+      keywords = document.createElement("meta");
+      keywords.setAttribute("name", "keywords");
+      document.head.appendChild(keywords);
     }
 
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) {
-      ogTitle.setAttribute("content", meta.title);
+    keywords.setAttribute("content", meta.keywords);
+
+    // Robots
+    let robots = document.querySelector(
+      'meta[name="robots"]'
+    );
+
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.setAttribute("name", "robots");
+      document.head.appendChild(robots);
     }
 
-    const ogDescription = document.querySelector('meta[property="og:description"]');
-    if (ogDescription) {
-      ogDescription.setAttribute("content", meta.description);
+    robots.setAttribute(
+      "content",
+      meta.index
+        ? "index, follow"
+        : "noindex, nofollow"
+    );
+
+    // Canonical
+    let canonical = document.querySelector(
+      'link[rel="canonical"]'
+    );
+
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
     }
 
-    const ogUrl = document.querySelector('meta[property="og:url"]');
-    if (ogUrl) {
-      ogUrl.setAttribute("content", `https://www.nyumbadirect.co.ke${location.pathname}`);
+    canonical.setAttribute("href", currentUrl);
+
+    // Open Graph title
+    let ogTitle = document.querySelector(
+      'meta[property="og:title"]'
+    );
+
+    if (!ogTitle) {
+      ogTitle = document.createElement("meta");
+      ogTitle.setAttribute("property", "og:title");
+      document.head.appendChild(ogTitle);
     }
 
-    const canonical = document.querySelector('link[rel="canonical"]');
-    if (canonical) {
-      canonical.setAttribute("href", `https://www.nyumbadirect.co.ke${location.pathname}`);
+    ogTitle.setAttribute("content", meta.title);
+
+    // Open Graph description
+    let ogDescription = document.querySelector(
+      'meta[property="og:description"]'
+    );
+
+    if (!ogDescription) {
+      ogDescription = document.createElement("meta");
+      ogDescription.setAttribute(
+        "property",
+        "og:description"
+      );
+      document.head.appendChild(ogDescription);
     }
+
+    ogDescription.setAttribute(
+      "content",
+      meta.description
+    );
+
+    // Open Graph URL
+    let ogUrl = document.querySelector(
+      'meta[property="og:url"]'
+    );
+
+    if (!ogUrl) {
+      ogUrl = document.createElement("meta");
+      ogUrl.setAttribute("property", "og:url");
+      document.head.appendChild(ogUrl);
+    }
+
+    ogUrl.setAttribute("content", currentUrl);
   }, [location.pathname]);
 
   return null;
 }
-
 function AIHelpAssistant() {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
