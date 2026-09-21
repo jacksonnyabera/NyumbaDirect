@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://nyumbadirect-bjig.onrender.com";
 
 function Properties() {
   const [properties, setProperties] = useState([]);
@@ -180,6 +182,26 @@ function Properties() {
             </p>
 
           </div>
+          <section className="properties-seo-intro">
+  <h2>Houses and Apartments for Rent in Kenya</h2>
+
+  <p>
+    Find houses, apartments, bedsitters, studios and other rental
+    properties across Kenya on NyumbaDirect. Search by town, area,
+    county, property type, bedrooms and monthly rent.
+  </p>
+
+  <p>
+    NyumbaDirect connects house hunters directly with landlords and
+    property managers, helping you discover rental homes and communicate
+    about available properties without relying on traditional agents.
+  </p>
+
+  <p>
+    Explore rental properties in Nairobi, Mombasa, Kisumu, Kirinyaga
+    and other towns across Kenya.
+  </p>
+</section>
 
           <div className="marketplace-header-actions">
 
