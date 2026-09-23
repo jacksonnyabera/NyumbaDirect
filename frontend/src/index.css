@@ -7309,3 +7309,888 @@ img {
 
 
 
+
+
+/* =========================================================
+   FINAL NYUMBADIRECT RESPONSIVE OVERRIDES
+   Desktop: 1025px+
+   Tablet: 481px - 1024px
+   Phone: 320px - 480px
+   ========================================================= */
+
+/* Global safety */
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  max-width: 100%;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+/* Keep long text from creating horizontal scrolling */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+a,
+span,
+label,
+button {
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+.site-header-inner {
+  width: min(100% - 32px, 1400px);
+}
+
+@media (max-width: 1024px) {
+  .site-header-inner {
+    width: calc(100% - 28px);
+  }
+
+  .desktop-navigation {
+    gap: 0;
+  }
+
+  .desktop-navigation a {
+    padding: 9px 8px;
+    font-size: 0.86rem;
+  }
+
+  .desktop-navigation-actions {
+    gap: 6px;
+  }
+
+  .nav-login-button,
+  .nav-register-button,
+  .nav-logout-button {
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 760px) {
+  .desktop-navigation,
+  .desktop-navigation-actions {
+    display: none !important;
+  }
+
+  .mobile-menu-button {
+    display: flex !important;
+    flex-shrink: 0;
+  }
+
+  .site-header-inner {
+    width: calc(100% - 24px);
+    min-height: 64px;
+  }
+
+  .mobile-navigation {
+    display: flex !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .site-logo {
+    min-width: 0;
+  }
+
+  .site-logo-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 380px) {
+  .site-header-inner {
+    width: calc(100% - 16px);
+  }
+
+  .site-logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .site-logo-text {
+    font-size: 0.98rem;
+  }
+
+  .mobile-menu-button {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* =========================================================
+   HOME PAGE
+   ========================================================= */
+
+.hero {
+  width: 100%;
+  min-width: 0;
+}
+
+.hero-content,
+.hero-image {
+  min-width: 0;
+}
+
+.hero-text {
+  overflow-wrap: anywhere;
+}
+
+.house-card {
+  max-width: 100%;
+}
+
+.features,
+.stats-grid,
+.city-grid,
+.process-grid {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .hero {
+    padding: 64px 5%;
+    gap: 42px;
+  }
+
+  .hero h1 {
+    font-size: clamp(42px, 7vw, 64px);
+  }
+
+  .features {
+    padding: 55px 5%;
+    gap: 20px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .city-grid,
+  .process-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .hero {
+    padding: 42px 16px;
+    gap: 32px;
+  }
+
+  .hero h1 {
+    font-size: clamp(38px, 12vw, 54px);
+    line-height: 1.02;
+  }
+
+  .hero-text {
+    font-size: 16px;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .hero-actions a {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .hero-trust {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .hero-image {
+    width: 100%;
+  }
+
+  .house-card {
+    width: min(100%, 420px);
+    transform: none;
+  }
+
+  .house-placeholder {
+    height: 220px;
+  }
+
+  .features {
+    grid-template-columns: 1fr;
+    padding: 45px 16px;
+  }
+
+  .stats-grid,
+  .city-grid,
+  .process-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-cta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .home-cta a {
+    width: 100%;
+    text-align: center;
+  }
+
+  .site-footer .footer-inner {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero {
+    padding-inline: 12px;
+  }
+
+  .hero h1 {
+    font-size: 36px;
+  }
+
+  .house-info {
+    padding: 16px;
+  }
+
+  .house-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* =========================================================
+   AUTH: LOGIN / REGISTER
+   ========================================================= */
+
+.auth-page {
+  width: 100%;
+  min-width: 0;
+}
+
+.auth-card,
+.auth-card-wide {
+  max-width: calc(100vw - 32px);
+  min-width: 0;
+}
+
+.form-grid,
+.auth-form,
+.auth-field {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .auth-page {
+    padding: 28px 12px;
+    align-items: flex-start;
+  }
+
+  .auth-card,
+  .auth-card-wide {
+    width: 100%;
+    max-width: none;
+    padding: 22px 16px;
+    border-radius: 18px;
+  }
+
+  .auth-card-top {
+    gap: 12px;
+  }
+
+  .auth-intro {
+    margin-top: 22px;
+  }
+
+  .auth-intro h1 {
+    font-size: clamp(28px, 9vw, 34px);
+  }
+
+  .auth-intro p {
+    font-size: 14px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .auth-row {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .auth-field input,
+  .auth-field select {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth-page {
+    padding: 20px 8px;
+  }
+
+  .auth-card,
+  .auth-card-wide {
+    padding: 18px 13px;
+  }
+
+  .auth-button {
+    min-height: 46px;
+  }
+}
+
+/* =========================================================
+   PROPERTIES / MARKETPLACE
+   ========================================================= */
+
+.properties-page,
+.properties-container,
+.marketplace-search,
+.marketplace-grid,
+.marketplace-card {
+  min-width: 0;
+}
+
+.marketplace-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.marketplace-card-image img,
+.property-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 1024px) {
+  .properties-container {
+    width: calc(100% - 28px);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .marketplace-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .marketplace-search,
+  .marketplace-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .properties-container {
+    width: calc(100% - 20px);
+  }
+
+  .marketplace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace-header-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .marketplace-search {
+    padding: 12px;
+  }
+
+  .filter-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .marketplace-card-image {
+    aspect-ratio: 16 / 10;
+    height: auto;
+  }
+
+  .marketplace-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .view-home-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* =========================================================
+   PROPERTY DETAILS
+   ========================================================= */
+
+.property-details-container,
+.property-details-card,
+.property-details-content {
+  min-width: 0;
+}
+
+.property-details-image {
+  width: 100%;
+  overflow: hidden;
+}
+
+.property-details-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 1024px) {
+  .property-details-container {
+    width: calc(100% - 28px);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .property-details-content {
+    padding: 30px;
+  }
+
+  .details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .property-details-container {
+    width: calc(100% - 20px);
+    padding-top: 24px;
+    padding-bottom: 50px;
+  }
+
+  .property-details-content {
+    padding: 20px 16px;
+  }
+
+  .property-details-content h1 {
+    font-size: clamp(25px, 8vw, 32px);
+    line-height: 1.15;
+  }
+
+  .property-price {
+    font-size: 25px;
+  }
+
+  .property-details-image {
+    height: 230px;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .details-grid div {
+    padding: 13px;
+  }
+
+  .owner-card {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 380px) {
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .property-details-content {
+    padding: 18px 13px;
+  }
+}
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+.dashboard-page,
+.dashboard-container,
+.dashboard-hero,
+.dashboard-section,
+.dashboard-stats,
+.dashboard-listings {
+  min-width: 0;
+}
+
+.dashboard-container {
+  width: min(1180px, calc(100% - 40px));
+}
+
+@media (max-width: 1024px) {
+  .dashboard-container {
+    width: calc(100% - 28px);
+  }
+
+  .dashboard-hero,
+  .dashboard-header {
+    gap: 20px;
+  }
+
+  .dashboard-stats,
+  .dashboard-hunter-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboard-container {
+    width: calc(100% - 20px);
+    padding-top: 20px;
+    padding-bottom: 45px;
+  }
+
+  .dashboard-hero,
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-hero {
+    padding: 20px 16px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 30px;
+  }
+
+  .dashboard-primary-action,
+  .add-property-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .dashboard-stats,
+  .dashboard-hunter-stats,
+  .dashboard-action-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .property-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .property-actions a,
+  .property-actions button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* =========================================================
+   ADD / EDIT PROPERTY FORMS
+   ========================================================= */
+
+.add-property-container,
+.property-form-card,
+.form-section,
+.form-row,
+.form-actions {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .add-property-container {
+    width: calc(100% - 28px);
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .add-property-container {
+    width: calc(100% - 20px);
+    padding-top: 25px;
+  }
+
+  .property-form-card {
+    padding: 18px 14px;
+    border-radius: 15px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 0;
+  }
+
+  .form-section {
+    padding-bottom: 22px;
+    margin-bottom: 25px;
+  }
+
+  .form-section input,
+  .form-section textarea,
+  .form-section select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .cancel-btn,
+  .submit-property-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .photo-section-header {
+    flex-direction: column;
+  }
+
+  .photo-upload-box {
+    padding: 18px 12px;
+  }
+}
+
+/* =========================================================
+   CONVERSATIONS
+   ========================================================= */
+
+.messages-page,
+.messages-container,
+.messages-card,
+.conversation-list,
+.conversation-item {
+  min-width: 0;
+}
+
+.conversation-item {
+  overflow: hidden;
+}
+
+.conversation-item > * {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .messages-page {
+    padding: 24px 10px 45px;
+  }
+
+  .messages-container {
+    width: calc(100% - 4px);
+  }
+
+  .messages-header h1 {
+    font-size: 30px;
+  }
+
+  .conversation-item {
+    padding: 15px 12px;
+    gap: 10px;
+  }
+
+  .conversation-avatar {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* =========================================================
+   CHAT / MESSAGES
+   ========================================================= */
+
+.messages-list {
+  min-width: 0;
+}
+
+.message-item,
+.message-content,
+.message-bubble,
+.message-input-row,
+.message-form {
+  min-width: 0;
+}
+
+.message-content {
+  max-width: min(70%, 620px);
+}
+
+.message-bubble {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 700px) {
+  .messages-list {
+    min-height: 420px;
+    max-height: 65vh;
+    padding: 16px 12px;
+    gap: 12px;
+  }
+
+  .message-content {
+    max-width: 82%;
+  }
+
+  .message-bubble {
+    padding: 10px 12px;
+  }
+
+  .message-input-row,
+  .message-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .message-input-row input,
+  .message-form input,
+  .message-form textarea {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .message-input-row button,
+  .message-form button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .message-content {
+    max-width: 88%;
+  }
+
+  .messages-list {
+    padding-inline: 9px;
+  }
+}
+
+/* =========================================================
+   AI HELP WIDGET
+   ========================================================= */
+
+.ai-assistant {
+  z-index: 2000;
+}
+
+.ai-help-panel {
+  max-width: calc(100vw - 24px);
+}
+
+@media (max-width: 640px) {
+  .ai-assistant {
+    right: 12px !important;
+    bottom: 12px !important;
+  }
+
+  .ai-help-panel {
+    width: min(360px, calc(100vw - 24px)) !important;
+    max-height: min(70vh, 560px);
+  }
+
+  .ai-help-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ai-help-form input,
+  .ai-help-form button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .ai-help-panel {
+    width: calc(100vw - 16px) !important;
+  }
+}
+
+/* =========================================================
+   FOOTER / SMALL SCREENS
+   ========================================================= */
+
+.site-footer {
+  width: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .footer-inner {
+    width: calc(100% - 24px);
+  }
+
+  .footer-bottom {
+    padding-inline: 12px;
+    text-align: center;
+  }
+}
+
+/* Final horizontal-overflow guard */
+main,
+section,
+article,
+header,
+footer,
+nav,
+div {
+  min-width: 0;
+}
+
+table {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
