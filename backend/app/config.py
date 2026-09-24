@@ -20,6 +20,13 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    mpesa_consumer_key: str = ""
+    mpesa_consumer_secret: str = ""
+    mpesa_passkey: str = ""
+    mpesa_shortcode: str = ""
+    mpesa_callback_url: str = ""
+    mpesa_environment: str = "sandbox"
+
 
 @lru_cache
 def get_settings() -> Settings:

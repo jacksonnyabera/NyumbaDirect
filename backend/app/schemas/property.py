@@ -128,6 +128,9 @@ class PropertyResponse(BaseModel):
         from_attributes=True,
     )
 
+    is_featured: bool
+    featured_until: datetime | None
+
 
 
 class PropertyUpdate(BaseModel):

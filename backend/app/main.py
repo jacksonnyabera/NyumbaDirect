@@ -8,6 +8,8 @@ from app.routers import health
 from fastapi.staticfiles import StaticFiles
 from app.routers import property_photos
 from app.routers import messages
+from app.routers.promotions import router as promotions_router
+from app.routers.payments import router as payments_router
 
 os.makedirs("uploads", exist_ok=True)
 app = FastAPI(
@@ -43,3 +45,5 @@ app.include_router(auth.router)
 app.include_router(properties.router)
 app.include_router(property_photos.router)
 app.include_router(messages.router)
+app.include_router(promotions_router)
+app.include_router(payments_router)
