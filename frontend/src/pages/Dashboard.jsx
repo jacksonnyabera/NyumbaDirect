@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://nyumbadirect-bjig.onrender.com";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -119,9 +121,78 @@ function Dashboard() {
     }
   };
 
+  const handleBoost = async (propertyId, packageName) => {
+  try {
+    const promotionResponse = await api.post("/promotions", {
+      property_id: propertyId,
+      package: packageName,
+    });
+
+    const promotion = promotionResponse.data;
+
+    const phoneNumber = window.prompt(
+      "Enter the M-Pesa phone number to pay with:\n\nExample: 0712345678"
+    );
+
+    if (!phoneNumber) {
+      return;
+    }
+
+    const paymentResponse = await api.post(
+      "/payments/mpesa/stk-push",
+      {
+        promotion_id: promotion.id,
+        phone_number: phoneNumber,
+      }
+    );
+
+    alert(
+      paymentResponse.data.message ||
+        "M-Pesa payment request sent. Check your phone and enter your M-Pesa PIN."
+    );
+  } catch (err) {
+    console.error(err);
+
+    if (err.response?.status === 401) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user_id");
+      navigate("/login");
+      return;
+    }
+
+    alert(
+      err.response?.data?.detail ||
+        "Unable to start M-Pesa payment."
+    );
+  }
+};
+  const handleBoostSelection = (propertyId) => {
+    const choice = window.prompt(
+      "Choose a boost package:\n\n" +
+        "1. 7 Days - KSh 300\n" +
+        "2. 14 Days - KSh 700\n" +
+        "3. 30 Days - KSh 1,500\n\n" +
+        "Enter 1, 2 or 3:"
+    );
+
+    const packages = {
+      "1": "7_DAYS",
+      "2": "14_DAYS",
+      "3": "30_DAYS",
+    };
+
+    if (choice && packages[choice]) {
+      handleBoost(
+        propertyId,
+        packages[choice]
+      );
+    }
+  };
+
   const isLandlord =
     user?.role?.toUpperCase() === "LANDLORD" ||
-    user?.role?.toUpperCase() === "PROPERTY_MANAGER";
+    user?.role?.toUpperCase() ===
+      "PROPERTY_MANAGER";
 
   const availableProperties = useMemo(
     () =>
@@ -311,10 +382,12 @@ function Dashboard() {
         {error && (
           <div className="dashboard-error">
             <span>⚠️</span>
+
             <div>
               <strong>
                 Something went wrong
               </strong>
+
               <p>{error}</p>
             </div>
           </div>
@@ -666,6 +739,12 @@ function Dashboard() {
                             ✓ Verified
                           </span>
                         )}
+
+                        {property.is_featured && (
+                          <span className="dashboard-property-featured">
+                            🚀 Featured
+                          </span>
+                        )}
                       </div>
 
                       <div className="dashboard-property-content">
@@ -727,9 +806,23 @@ function Dashboard() {
 
                           <button
                             type="button"
+                            className="property-boost-action"
+                            onClick={() =>
+                              handleBoostSelection(
+                                property.id
+                              )
+                            }
+                          >
+                            🚀 Boost
+                          </button>
+
+                          <button
+                            type="button"
                             className="property-delete-action"
                             onClick={() =>
-                              handleDelete(property.id)
+                              handleDelete(
+                                property.id
+                              )
                             }
                           >
                             Delete

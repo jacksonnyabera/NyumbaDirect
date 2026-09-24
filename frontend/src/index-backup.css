@@ -8194,19 +8194,3 @@ table {
   overflow-x: auto;
 }
 
-.property-boost-action {
-  border: none;
-  cursor: pointer;
-  background: #f59e0b;
-  color: #ffffff;
-  font: inherit;
-  padding: 0.65rem 0.9rem;
-  border-radius: 8px;
-  font-weight: 700;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.property-boost-action:hover {
-  transform: translateY(-1px);
-  opacity: 0.9;
-}
