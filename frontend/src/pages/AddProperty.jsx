@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -24,6 +24,9 @@ function AddProperty() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -32,6 +35,32 @@ function AddProperty() {
       ...previous,
       [name]: type === "checkbox" ? checked : value,
     }));
+  };
+
+  const handleFileChange = (event) => {
+  setPhotoError("");
+
+  const files = Array.from(event.target.files || []);
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ];
+
+  const validFiles = files.filter(
+    (file) =>
+      allowedTypes.includes(file.type) &&
+      file.size <= 5 * 1024 * 1024
+  );
+
+  if (validFiles.length !== files.length) {
+    setPhotoError(
+      "Some files were skipped. Only JPG, PNG and WEBP images up to 5 MB are allowed."
+    );
+  }
+
+  setSelectedFiles(validFiles);
   };
 
   const handleSubmit = async (event) => {
@@ -57,9 +86,36 @@ function AddProperty() {
           : null,
       };
 
-      await api.post("/properties", payload);
+      const propertyResponse = await api.post(
+  "/properties",
+  payload
+);
 
-      navigate("/dashboard");
+const propertyId = propertyResponse.data.id;
+
+if (selectedFiles.length > 0) {
+  setUploading(true);
+
+  for (let index = 0; index < selectedFiles.length; index++) {
+    const file = selectedFiles[index];
+
+    const photoFormData = new FormData();
+
+    photoFormData.append("file", file);
+
+    photoFormData.append(
+      "is_primary",
+      index === 0 ? "true" : "false"
+    );
+
+    await api.post(
+      `/properties/${propertyId}/photos`,
+      photoFormData
+    );
+  }
+}
+
+navigate("/dashboard");
 
     } catch (err) {
       console.error(err);
@@ -73,9 +129,11 @@ function AddProperty() {
       } else {
         setError("Unable to create property.");
       }
-    } finally {
-      setLoading(false);
-    }
+    {loading
+  ? uploading
+    ? "Uploading photos..."
+    : "Creating..."
+  : "Create Property"}
   };
 
   return (
@@ -95,7 +153,7 @@ function AddProperty() {
       <main className="add-property-container">
 
         <div className="form-header">
-          <p className="eyebrow">🏠 NYUMBADIRECT</p>
+          <p className="eyebrow">ðŸ  NYUMBADIRECT</p>
 
           <h1>Add a Property</h1>
 
@@ -324,6 +382,62 @@ function AddProperty() {
 
             </div>
 
+            <div className="form-section photo-upload-section">
+  <h2>Property Photos</h2>
+
+  <p>
+    Add clear photos of the property. Good photos help
+    house hunters understand the property before contacting you.
+  </p>
+
+  {photoError && (
+    <div className="error-message">
+      {photoError}
+    </div>
+  )}
+
+  <div className="photo-upload-box">
+    <label
+      htmlFor="property-photo-input"
+      className="photo-file-label"
+    >
+      ðŸ“· Choose Photos
+    </label>
+
+    <input
+      id="property-photo-input"
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      multiple
+      onChange={handleFileChange}
+    />
+
+    <p>
+      JPG, PNG or WEBP Â· Maximum 5 MB per image
+    </p>
+
+    {selectedFiles.length > 0 && (
+      <div className="selected-files">
+        <strong>
+          {selectedFiles.length}{" "}
+          {selectedFiles.length === 1
+            ? "image"
+            : "images"}{" "}
+          selected
+        </strong>
+
+        <ul>
+          {selectedFiles.map((file, index) => (
+            <li key={index}>
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+</div>
+
             <div className="form-actions">
 
               <Link
@@ -354,5 +468,7 @@ function AddProperty() {
     </div>
   );
 }
+}
 
 export default AddProperty;
+
