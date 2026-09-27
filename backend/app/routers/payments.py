@@ -221,3 +221,37 @@ def mpesa_callback(
         "ResultCode": 0,
         "ResultDesc": "Callback received successfully."
     }
+
+@router.get("/mpesa/status/{promotion_id}")
+def mpesa_payment_status(
+    promotion_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    promotion = db.scalar(
+        select(PropertyPromotion).where(
+            PropertyPromotion.id == promotion_id
+        )
+    )
+
+    if not promotion:
+        raise HTTPException(
+            status_code=404,
+            detail="Promotion not found."
+        )
+
+    if promotion.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only view your own payment."
+        )
+
+    return {
+        "promotion_id": promotion.id,
+        "payment_status": promotion.payment_status,
+        "payment_reference": promotion.payment_reference,
+        "result_code": promotion.result_code,
+        "result_description": promotion.result_description,
+        "starts_at": promotion.starts_at,
+        "expires_at": promotion.expires_at,
+    }
