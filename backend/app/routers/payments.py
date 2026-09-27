@@ -130,20 +130,26 @@ def mpesa_callback(
     if not checkout_request_id:
         return {
             "ResultCode": 0,
-            "ResultDesc": "Callback received."
+            "ResultDesc": "Callback received.",
         }
 
     promotion = db.scalar(
         select(PropertyPromotion).where(
-            PropertyPromotion.checkout_request_id
-            == checkout_request_id
+            PropertyPromotion.checkout_request_id == checkout_request_id
         )
     )
 
     if not promotion:
         return {
             "ResultCode": 0,
-            "ResultDesc": "Promotion not found."
+            "ResultDesc": "Promotion not found.",
+        }
+
+    # Prevent duplicate successful callbacks from extending the promotion
+    if promotion.payment_status == "PAID":
+        return {
+            "ResultCode": 0,
+            "ResultDesc": "Payment already processed.",
         }
 
     promotion.merchant_request_id = merchant_request_id
@@ -160,6 +166,7 @@ def mpesa_callback(
 
         receipt_number = None
         phone_number = promotion.phone_number
+        paid_amount = None
 
         for item in metadata_items:
             name = item.get("Name")
@@ -170,6 +177,36 @@ def mpesa_callback(
 
             elif name == "PhoneNumber":
                 phone_number = str(value)
+
+            elif name == "Amount":
+                paid_amount = value
+
+        # Verify the amount matches the promotion
+        if paid_amount is None or int(paid_amount) != int(promotion.amount):
+            promotion.payment_status = "FAILED"
+            promotion.result_description = (
+                "Payment amount does not match promotion amount."
+            )
+
+            db.commit()
+
+            return {
+                "ResultCode": 0,
+                "ResultDesc": "Callback received.",
+            }
+
+        if not receipt_number:
+            promotion.payment_status = "FAILED"
+            promotion.result_description = (
+                "M-Pesa receipt number missing."
+            )
+
+            db.commit()
+
+            return {
+                "ResultCode": 0,
+                "ResultDesc": "Callback received.",
+            }
 
         promotion.payment_status = "PAID"
         promotion.payment_reference = receipt_number
@@ -197,21 +234,18 @@ def mpesa_callback(
 
             return {
                 "ResultCode": 0,
-                "ResultDesc": "Callback received."
+                "ResultDesc": "Callback received.",
             }
 
-        promotion.expires_at = (
-            now + timedelta(days=days)
-        )
+        promotion.expires_at = now + timedelta(days=days)
 
         property_obj = promotion.property
 
         if property_obj:
             property_obj.is_featured = True
-            property_obj.featured_until = (
-                promotion.expires_at
-            )
+            property_obj.featured_until = promotion.expires_at
 
+    # Payment failed/cancelled
     else:
         promotion.payment_status = "FAILED"
 
@@ -219,7 +253,7 @@ def mpesa_callback(
 
     return {
         "ResultCode": 0,
-        "ResultDesc": "Callback received successfully."
+        "ResultDesc": "Callback received successfully.",
     }
 
 @router.get("/mpesa/status/{promotion_id}")
