@@ -30,15 +30,14 @@ function Conversations() {
           ]);
 
         setUser(userResponse.data);
-        setConversations(
-          conversationsResponse.data || []
-        );
+        setConversations(conversationsResponse.data || []);
       } catch (err) {
         console.error("Failed to load conversations:", err);
 
         if (err.response?.status === 401) {
           localStorage.removeItem("access_token");
           localStorage.removeItem("user_id");
+          localStorage.removeItem("user");
           navigate("/login");
           return;
         }
@@ -58,6 +57,7 @@ function Conversations() {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_id");
+    localStorage.removeItem("user");
     navigate("/login");
   };
 
@@ -73,21 +73,15 @@ function Conversations() {
 
   const getOtherUserName = (conversation) => {
     const otherUser = getOtherUser(conversation);
-
     return otherUser?.full_name || "NyumbaDirect User";
   };
 
   const getInitial = (name) => {
-    return (
-      name?.trim()?.charAt(0)?.toUpperCase() || "U"
-    );
+    return name?.trim()?.charAt(0)?.toUpperCase() || "U";
   };
 
   const getPropertyTitle = (conversation) => {
-    return (
-      conversation.property?.title ||
-      "Property conversation"
-    );
+    return conversation.property?.title || "Property conversation";
   };
 
   const getPropertyLocation = (conversation) => {
@@ -108,7 +102,21 @@ function Conversations() {
       : "Location not specified";
   };
 
-  const formatDate = (dateString) => {
+  const getContact = (conversation) => {
+    if (conversation.contact) {
+      return conversation.contact;
+    }
+
+    const otherUser = getOtherUser(conversation);
+
+    return {
+      name: otherUser?.full_name || "Property owner",
+      role: isLandlord ? "House Hunter" : "Landlord",
+      phone_number: otherUser?.phone_number || null,
+    };
+  };
+
+const formatDate = (dateString) => {
     if (!dateString) {
       return "";
     }
@@ -120,9 +128,7 @@ function Conversations() {
     }
 
     const now = new Date();
-
-    const sameDay =
-      date.toDateString() === now.toDateString();
+    const sameDay = date.toDateString() === now.toDateString();
 
     if (sameDay) {
       return date.toLocaleTimeString([], {
@@ -147,15 +153,12 @@ function Conversations() {
         <div className="conversations-loading">
           <div className="conversations-spinner" />
           <h2>Loading your messages...</h2>
-          <p>
-            We're getting your conversations ready.
-          </p>
+          <p>We're getting your conversations ready.</p>
         </div>
       </div>
     );
   }
-
-  return (
+ return (
     <div className="conversations-page">
       <nav className="navbar">
         <Link to="/" className="logo">
@@ -187,17 +190,12 @@ function Conversations() {
       <main className="conversations-container">
         <section className="conversations-header">
           <div>
-            <span className="section-label">
-              COMMUNICATION
-            </span>
-
+            <span className="section-label">COMMUNICATION</span>
             <h1>Your Messages</h1>
-
             <p>
-              Communicate directly with{" "}
               {isLandlord
-                ? "house hunters interested in your properties."
-                : "landlords about homes you're interested in."}
+                ? "Reply directly to house hunters interested in your properties."
+                : "Ask landlords about homes you're interested in and get help from NyumbaDirect AI when available."}
             </p>
           </div>
 
@@ -208,6 +206,21 @@ function Conversations() {
             🔎 Browse Properties
           </Link>
         </section>
+
+        {!isLandlord && (
+          <div className="conversation-ai-notice">
+            <span className="conversation-ai-icon">🤖</span>
+            <div>
+              <strong>NyumbaDirect AI assistance</strong>
+              <p>
+                When the landlord or property manager has not replied yet,
+                AI may provide listing guidance. It will always be labelled as
+                AI and will direct you to call the property owner for current
+                availability and viewing confirmation.
+              </p>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="conversations-error">
@@ -234,16 +247,12 @@ function Conversations() {
 
           {conversations.length === 0 ? (
             <div className="conversations-empty">
-              <div className="conversations-empty-icon">
-                💬
-              </div>
-
+              <div className="conversations-empty-icon">💬</div>
               <h2>No conversations yet</h2>
-
               <p>
                 {isLandlord
-                  ? "When house hunters contact you about your properties, your conversations will appear here."
-                  : "Find a property you're interested in and contact the landlord directly."}
+                  ? "When house hunters contact you about your properties, their messages will appear here."
+                  : "Find a property you're interested in, open it and contact the landlord directly."}
               </p>
 
               <Link
@@ -256,10 +265,11 @@ function Conversations() {
           ) : (
             <div className="conversations-list">
               {conversations.map((conversation) => {
-                const otherUserName =
-                  getOtherUserName(conversation);
+                const otherUserName = getOtherUserName(conversation);
+                const contact = getContact(conversation);
+                const property = conversation.property;
 
-                return (
+                  return (
                   <Link
                     key={conversation.id}
                     to={`/messages/${conversation.id}`}
@@ -271,10 +281,7 @@ function Conversations() {
 
                     <div className="conversation-main">
                       <div className="conversation-top">
-                        <strong>
-                          {otherUserName}
-                        </strong>
-
+                        <strong>{otherUserName}</strong>
                         <span>
                           {formatDate(
                             conversation.updated_at ||
@@ -284,29 +291,31 @@ function Conversations() {
                       </div>
 
                       <div className="conversation-property">
-                        🏠{" "}
-                        {getPropertyTitle(
-                          conversation
-                        )}
+                        🏠 {getPropertyTitle(conversation)}
                       </div>
 
                       <div className="conversation-location">
-                        📍{" "}
-                        {getPropertyLocation(
-                          conversation
-                        )}
+                        📍 {getPropertyLocation(conversation)}
                       </div>
 
                       <div className="conversation-role">
-                        {isLandlord
-                          ? "House hunter"
-                          : "Property owner"}
+                          {isLandlord ? "House hunter" : contact.role}
                       </div>
+
+                      {!isLandlord && contact.phone_number && (
+                        <div className="conversation-phone">
+                          📞 {contact.phone_number}
+                        </div>
+                      )}
+
+                      {property?.monthly_rent != null && (
+                        <div className="conversation-rent">
+                          KSh {Number(property.monthly_rent).toLocaleString()}/month
+                        </div>
+                      )}
                     </div>
 
-                    <div className="conversation-arrow">
-                      →
-                    </div>
+                    <div className="conversation-arrow">→</div>
                   </Link>
                 );
               })}
