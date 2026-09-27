@@ -1065,15 +1065,15 @@ function Dashboard() {
                           </Link>
 
                           <button
-                            type="button"
-                            className="property-boost-action"
-                            onClick={() =>
-                              handleBoostSelection(
-                                property.id
-                              )
-                            }
+                             type="button"
+                             className="property-boost-action"
+                             onClick={() =>
+                               navigate(
+                                 `/boost-property/${property.id}`
+                               )
+                             }
                           >
-                            🚀 Boost
+                             🚀 Boost
                           </button>
 
                           <button
@@ -1097,191 +1097,6 @@ function Dashboard() {
           </section>
         )}
 
-        {isLandlord && (
-          <section className="dashboard-section">
-            <div className="dashboard-section-heading">
-              <div>
-                <span className="section-label">
-                  BOOST PAYMENTS
-                </span>
-                <h2>Promotion Payments</h2>
-                <p>
-                  Track your boosts, M-Pesa payments and expiry dates.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="dashboard-section-link"
-                onClick={loadPromotions}
-              >
-                Refresh
-              </button>
-            </div>
-
-            {promotions.length === 0 ? (
-              <div className="dashboard-empty-state dashboard-empty-small">
-                <div className="dashboard-empty-icon">🚀</div>
-                <h2>No boost payments yet</h2>
-                <p>
-                  Boost a property to give it higher visibility.
-                </p>
-              </div>
-            ) : (
-              <div className="promotion-list">
-                {promotions.slice(0, 10).map((promotion) => {
-                  const status = String(
-                    promotion.payment_status || "PENDING"
-                  ).toUpperCase();
-
-                  const property = properties.find(
-                    (item) =>
-                      Number(item.id) ===
-                      Number(promotion.property_id)
-                  );
-
-                  return (
-                    <div
-                      className="promotion-card"
-                      key={promotion.id}
-                    >
-                      <div className="promotion-card-main">
-                        <div>
-                          <span className="section-label">
-                            PROPERTY BOOST
-                          </span>
-
-                          <h3>
-                            {property?.title ||
-                              `Property #${promotion.property_id}`}
-                          </h3>
-
-                          <p>
-                            Package: <strong>{promotion.package}</strong>
-                          </p>
-
-                          <p>
-                            Amount:{" "}
-                            <strong>
-                              KSh{" "}
-                              {Number(
-                                promotion.amount || 0
-                              ).toLocaleString()}
-                            </strong>
-                          </p>
-
-                          {promotion.phone_number && (
-                            <p>
-                              M-Pesa:{" "}
-                              <strong>
-                                {promotion.phone_number}
-                              </strong>
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="promotion-card-status">
-                          <span
-                            className={`promotion-status ${
-                              status === "PAID"
-                                ? "promotion-status-paid"
-                                : status === "FAILED"
-                                  ? "promotion-status-failed"
-                                  : "promotion-status-pending"
-                            }`}
-                          >
-                            {status === "PAID"
-                              ? "✓ PAID"
-                              : status === "FAILED"
-                                ? "✕ FAILED"
-                                : "● PENDING"}
-                          </span>
-
-                          {status === "PAID" &&
-                            promotion.payment_reference && (
-                              <small>
-                                Receipt:{" "}
-                                {promotion.payment_reference}
-                              </small>
-                            )}
-                        </div>
-                      </div>
-
-                      {status === "PAID" && (
-                        <div className="promotion-details">
-                          <span>
-                            Started:{" "}
-                            {formatPromotionDate(
-                              promotion.starts_at
-                            )}
-                          </span>
-
-                          <span>
-                            Expires:{" "}
-                            {formatPromotionDate(
-                              promotion.expires_at
-                            )}
-                          </span>
-                        </div>
-                      )}
-
-                      {status === "FAILED" && (
-                        <div className="promotion-error-message">
-                          {promotion.result_description ||
-                            "Payment failed. Try again with the correct M-Pesa number."}
-                        </div>
-                      )}
-
-                      {status === "PENDING" && (
-                        <div className="promotion-pending-message">
-                          Waiting for M-Pesa confirmation. Check the
-                          correct phone for the STK prompt.
-                        </div>
-                      )}
-
-                      <div className="promotion-actions">
-                        {(status === "PENDING" ||
-                          status === "FAILED") && (
-                          <button
-                            type="button"
-                            className="property-boost-action"
-                            disabled={
-                              retryingPromotion === promotion.id
-                            }
-                            onClick={() =>
-                              handleRetryPayment(promotion)
-                            }
-                          >
-                            {retryingPromotion === promotion.id
-                              ? "Sending..."
-                              : "Change Number / Retry"}
-                          </button>
-                        )}
-
-                        {status === "PENDING" && (
-                          <button
-                            type="button"
-                            className="property-view-action"
-                            disabled={
-                              paymentChecking[promotion.id]
-                            }
-                            onClick={() =>
-                              handlePaymentStatus(promotion.id)
-                            }
-                          >
-                            {paymentChecking[promotion.id]
-                              ? "Checking..."
-                              : "Check Payment"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        )}
 
         {/* CONVERSATIONS */}
         <section className="dashboard-section">

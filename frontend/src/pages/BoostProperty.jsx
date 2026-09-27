@@ -1,38 +1,34 @@
 ﻿import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 
 const PACKAGES = [
   {
-    id: "7_DAYS",
-    name: "Starter Boost",
-    days: 7,
-    price: 300,
-    description: "Give your property extra visibility for 7 days.",
+    key: "7_DAYS",
+    days: "7 Days",
+    amount: 300,
+    description: "Give your property a visibility boost for one week.",
   },
   {
-    id: "14_DAYS",
-    name: "Growth Boost",
-    days: 14,
-    price: 700,
-    description: "Keep your property promoted for two weeks.",
-    popular: true,
+    key: "14_DAYS",
+    days: "14 Days",
+    amount: 700,
+    description: "Keep your listing promoted for two weeks.",
   },
   {
-    id: "30_DAYS",
-    name: "Premium Boost",
-    days: 30,
-    price: 1500,
-    description: "Maximum promotion for landlords who want longer visibility.",
+    key: "30_DAYS",
+    days: "30 Days",
+    amount: 1500,
+    description: "Maximum promotion period for long-term visibility.",
   },
 ];
 
-export default function BoostProperty() {
+function BoostProperty() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
 
   const [property, setProperty] = useState(null);
-  const [selectedPackage, setSelectedPackage] = useState("14_DAYS");
+  const [selectedPackage, setSelectedPackage] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -41,13 +37,34 @@ export default function BoostProperty() {
 
   useEffect(() => {
     const loadProperty = async () => {
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       try {
-        const response = await api.get(`/properties/${propertyId}`);
+        setLoading(true);
+
+        const response = await api.get(
+          `/properties/${propertyId}`
+        );
+
         setProperty(response.data);
       } catch (err) {
         console.error(err);
+
+        if (err.response?.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("user_id");
+          navigate("/login");
+          return;
+        }
+
         setError(
-          err.response?.data?.detail || "Unable to load this property."
+          err.response?.data?.detail ||
+            "Unable to load this property."
         );
       } finally {
         setLoading(false);
@@ -55,11 +72,28 @@ export default function BoostProperty() {
     };
 
     loadProperty();
-  }, [propertyId]);
+  }, [navigate, propertyId]);
 
-  const selected = PACKAGES.find(
-    (item) => item.id === selectedPackage
-  );
+  const normalizePhone = (value) => {
+    const clean = value.replace(/\s+/g, "").trim();
+
+    if (clean.startsWith("+254")) {
+      return clean.slice(1);
+    }
+
+    if (clean.startsWith("254")) {
+      return clean;
+    }
+
+    if (
+      clean.startsWith("0") &&
+      clean.length === 10
+    ) {
+      return `254${clean.slice(1)}`;
+    }
+
+    return clean;
+  };
 
   const handlePayment = async (event) => {
     event.preventDefault();
@@ -67,30 +101,68 @@ export default function BoostProperty() {
     setError("");
     setMessage("");
 
-    if (!phoneNumber.trim()) {
-      setError("Enter the M-Pesa phone number to receive the payment prompt.");
+    if (!selectedPackage) {
+      setError(
+        "Please choose a boost package first."
+      );
+      return;
+    }
+
+    const normalizedPhone =
+      normalizePhone(phoneNumber);
+
+    if (!/^2547\d{8}$/.test(normalizedPhone)) {
+      setError(
+        "Enter a valid Kenyan M-Pesa number, for example 0712345678."
+      );
       return;
     }
 
     try {
       setPaying(true);
 
-      const response = await api.post("/payments/mpesa/stk-push", {
-        property_id: Number(propertyId),
-        package: selectedPackage,
-        phone_number: phoneNumber.trim(),
-      });
+      /*
+       * Create the promotion ONLY after
+       * the landlord chooses a package.
+       */
+      const promotionResponse =
+        await api.post("/promotions", {
+          property_id: Number(propertyId),
+          package: selectedPackage.key,
+        });
+
+      const promotion =
+        promotionResponse.data;
+
+      /*
+       * Start M-Pesa payment.
+       */
+      const paymentResponse =
+        await api.post(
+          "/payments/mpesa/stk-push",
+          {
+            promotion_id: promotion.id,
+            phone_number: normalizedPhone,
+          }
+        );
 
       setMessage(
-        response.data?.message ||
-          "M-Pesa payment prompt sent. Complete the payment on your phone."
+        paymentResponse.data?.message ||
+          "STK Push sent. Check your M-Pesa phone and enter your PIN."
       );
     } catch (err) {
       console.error(err);
 
+      if (err.response?.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_id");
+        navigate("/login");
+        return;
+      }
+
       setError(
         err.response?.data?.detail ||
-          "Unable to start the M-Pesa payment. Please try again."
+          "Unable to start the boost payment. Please try again."
       );
     } finally {
       setPaying(false);
@@ -99,178 +171,621 @@ export default function BoostProperty() {
 
   if (loading) {
     return (
-      <main className="boost-page">
-        <div className="boost-container">
-          <p>Loading property...</p>
+      <div className="boost-page">
+        <div className="boost-shell boost-loading">
+          <div className="boost-spinner" />
+
+          <h2>
+            Loading property...
+          </h2>
         </div>
-      </main>
+      </div>
     );
   }
 
-  if (!property) {
+  if (error && !property) {
     return (
-      <main className="boost-page">
-        <div className="boost-container">
-          <h1>Property not found</h1>
-          <button onClick={() => navigate("/dashboard")}>
+      <div className="boost-page">
+        <div className="boost-shell boost-error-state">
+          <span className="boost-icon">
+            ⚠️
+          </span>
+
+          <h1>
+            Unable to open boost
+          </h1>
+
+          <p>{error}</p>
+
+          <Link
+            to="/dashboard"
+            className="boost-secondary-button"
+          >
             Back to Dashboard
-          </button>
+          </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="boost-page">
-      <div className="boost-container">
+    <div className="boost-page">
+      <div className="boost-shell">
 
-        <button
-          type="button"
-          className="boost-back-btn"
-          onClick={() => navigate("/dashboard")}
-        >
-          ← Back to Dashboard
-        </button>
+        <div className="boost-topbar">
+          <Link
+            to="/dashboard"
+            className="boost-back-link"
+          >
+            ← Dashboard
+          </Link>
 
-        <div className="boost-header">
-          <span className="boost-badge">PROPERTY BOOST</span>
+          <span className="boost-brand">
+            Nyumba<span>Direct</span>
+          </span>
+        </div>
 
-          <h1>Boost Your Property</h1>
+        <section className="boost-header">
+          <span className="boost-eyebrow">
+            PROPERTY PROMOTION
+          </span>
+
+          <h1>
+            Boost your property
+          </h1>
 
           <p>
-            Get your property more visibility and help more house hunters
-            discover your listing.
+            Choose a promotion package to give
+            your listing more visibility on
+            NyumbaDirect.
           </p>
+        </section>
 
-          <div className="boost-property-summary">
-            <h2>{property.title}</h2>
+        <section className="boost-property-card">
+          <div>
+            <span className="boost-property-label">
+              SELECTED PROPERTY
+            </span>
+
+            <h2>
+              {property?.title ||
+                `Property #${propertyId}`}
+            </h2>
 
             <p>
-              {property.town || property.county || "Kenya"}
-              {property.monthly_rent
-                ? ` • KSh ${Number(property.monthly_rent).toLocaleString()}/month`
-                : ""}
+              {[
+                property?.area,
+                property?.town,
+                property?.county,
+              ]
+                .filter(Boolean)
+                .join(", ") ||
+                "Location not specified"}
             </p>
           </div>
-        </div>
+
+          <strong>
+            KSh{" "}
+            {Number(
+              property?.monthly_rent || 0
+            ).toLocaleString()}
+            /month
+          </strong>
+        </section>
+
+        {error && (
+          <div className="boost-alert boost-alert-error">
+            {error}
+          </div>
+        )}
+
+        {message && (
+          <div className="boost-alert boost-alert-success">
+            ✓ {message}
+          </div>
+        )}
 
         <section className="boost-packages">
 
-          <h2>Choose Your Boost Package</h2>
+          {PACKAGES.map((item) => {
+            const selected =
+              selectedPackage?.key === item.key;
 
-          <p className="boost-section-description">
-            Select how long you want your property to be promoted.
-          </p>
-
-          <div className="boost-package-grid">
-
-            {PACKAGES.map((pkg) => (
+            return (
               <button
-                key={pkg.id}
+                key={item.key}
                 type="button"
                 className={`boost-package-card ${
-                  selectedPackage === pkg.id ? "selected" : ""
+                  selected ? "selected" : ""
                 }`}
-                onClick={() => setSelectedPackage(pkg.id)}
+                onClick={() => {
+                  setSelectedPackage(item);
+                  setMessage("");
+                  setError("");
+                }}
               >
-                {pkg.popular && (
+
+                {item.key === "14_DAYS" && (
                   <span className="boost-popular">
-                    MOST POPULAR
+                    POPULAR
                   </span>
                 )}
 
-                <div className="boost-package-icon">
-                  🚀
-                </div>
+                <span className="boost-package-check">
+                  {selected ? "✓" : ""}
+                </span>
 
-                <h3>{pkg.name}</h3>
+                <span className="boost-package-days">
+                  {item.days}
+                </span>
 
-                <div className="boost-duration">
-                  {pkg.days} Days
-                </div>
+                <strong>
+                  KSh{" "}
+                  {item.amount.toLocaleString()}
+                </strong>
 
-                <div className="boost-price">
-                  KSh {pkg.price.toLocaleString()}
-                </div>
+                <span className="boost-package-description">
+                  {item.description}
+                </span>
 
-                <p>{pkg.description}</p>
-
-                <div className="boost-select-indicator">
-                  {selectedPackage === pkg.id
-                    ? "✓ Selected"
-                    : "Select Package"}
-                </div>
               </button>
-            ))}
+            );
+          })}
 
-          </div>
         </section>
 
-        <section className="boost-payment-card">
+        <form
+          className="boost-payment-card"
+          onSubmit={handlePayment}
+        >
 
-          <h2>Complete Payment</h2>
+          <div>
+            <span className="boost-eyebrow">
+              M-PESA PAYMENT
+            </span>
 
-          <p>
-            You selected{" "}
-            <strong>{selected?.name}</strong> for{" "}
-            <strong>
-              KSh {selected?.price.toLocaleString()}
-            </strong>.
+            <h2>
+              Pay securely from your phone
+            </h2>
+
+            <p>
+              After you continue, an M-Pesa STK
+              prompt will be sent to this number.
+            </p>
+          </div>
+
+          <label htmlFor="boost-phone">
+            M-Pesa phone number
+          </label>
+
+          <input
+            id="boost-phone"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            placeholder="0712345678"
+            value={phoneNumber}
+            onChange={(event) =>
+              setPhoneNumber(
+                event.target.value
+              )
+            }
+            disabled={paying}
+          />
+
+          <button
+            type="submit"
+            className="boost-pay-button"
+            disabled={
+              paying || !selectedPackage
+            }
+          >
+            {paying
+              ? "Sending STK Push..."
+              : selectedPackage
+                ? `Boost for KSh ${selectedPackage.amount.toLocaleString()}`
+                : "Choose a package to continue"}
+          </button>
+
+          <p className="boost-secure-note">
+            Your property is only marked as
+            boosted after a successful M-Pesa
+            confirmation.
           </p>
 
-          <form onSubmit={handlePayment}>
-
-            <label htmlFor="boost-phone">
-              M-Pesa Phone Number
-            </label>
-
-            <input
-              id="boost-phone"
-              type="tel"
-              value={phoneNumber}
-              onChange={(event) =>
-                setPhoneNumber(event.target.value)
-              }
-              placeholder="e.g. 0712345678"
-              autoComplete="tel"
-            />
-
-            <small>
-              You will receive an M-Pesa payment prompt on this number.
-            </small>
-
-            {error && (
-              <div className="boost-error">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="boost-success">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="boost-pay-btn"
-              disabled={paying}
-            >
-              {paying
-                ? "Sending Payment Prompt..."
-                : `Pay KSh ${selected?.price.toLocaleString()} & Boost`}
-            </button>
-
-          </form>
-        </section>
-
-        <div className="boost-trust">
-          <span>🔒 Secure Payment</span>
-          <span>📱 M-Pesa</span>
-          <span>🚀 More Visibility</span>
-        </div>
+        </form>
 
       </div>
-    </main>
+
+      <style>{`
+
+        .boost-page {
+          min-height: 100vh;
+          padding: 24px 16px 60px;
+          background:
+            linear-gradient(
+              180deg,
+              #f8fafc 0%,
+              #eef6f5 100%
+            );
+          color: #0f172a;
+        }
+
+        .boost-shell {
+          width: min(980px, 100%);
+          margin: 0 auto;
+        }
+
+        .boost-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 44px;
+        }
+
+        .boost-back-link {
+          color: #475569;
+          text-decoration: none;
+          font-weight: 700;
+        }
+
+        .boost-back-link:hover {
+          color: #0f766e;
+        }
+
+        .boost-brand {
+          font-size: 20px;
+          font-weight: 900;
+        }
+
+        .boost-brand span {
+          color: #0f766e;
+        }
+
+        .boost-header {
+          max-width: 680px;
+          margin-bottom: 24px;
+        }
+
+        .boost-eyebrow,
+        .boost-property-label {
+          color: #2563eb;
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: .12em;
+        }
+
+        .boost-header h1 {
+          margin: 8px 0;
+          font-size: clamp(
+            34px,
+            6vw,
+            52px
+          );
+          letter-spacing: -1.8px;
+        }
+
+        .boost-header p,
+        .boost-payment-card p,
+        .boost-property-card p {
+          color: #64748b;
+          line-height: 1.7;
+        }
+
+        .boost-property-card,
+        .boost-payment-card {
+          background: white;
+          border: 1px solid rgba(
+            15,
+            23,
+            42,
+            .07
+          );
+          border-radius: 22px;
+          box-shadow:
+            0 16px 45px rgba(
+              15,
+              23,
+              42,
+              .07
+            );
+        }
+
+        .boost-property-card {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 20px;
+          padding: 22px;
+          margin-bottom: 20px;
+        }
+
+        .boost-property-card h2 {
+          margin: 7px 0 2px;
+        }
+
+        .boost-property-card p {
+          margin: 0;
+        }
+
+        .boost-property-card > strong {
+          white-space: nowrap;
+        }
+
+        .boost-alert {
+          padding: 13px 16px;
+          border-radius: 12px;
+          margin-bottom: 18px;
+          font-weight: 650;
+        }
+
+        .boost-alert-error {
+          background: #fef2f2;
+          color: #991b1b;
+        }
+
+        .boost-alert-success {
+          background: #ecfdf5;
+          color: #166534;
+        }
+
+        .boost-packages {
+          display: grid;
+          grid-template-columns:
+            repeat(
+              3,
+              minmax(0, 1fr)
+            );
+          gap: 16px;
+          margin-bottom: 22px;
+        }
+
+        .boost-package-card {
+          position: relative;
+          min-height: 230px;
+          padding: 24px;
+          border: 2px solid #e2e8f0;
+          border-radius: 20px;
+          background: white;
+          text-align: left;
+          cursor: pointer;
+          transition:
+            transform .2s ease,
+            border-color .2s ease,
+            box-shadow .2s ease;
+        }
+
+        .boost-package-card:hover {
+          transform:
+            translateY(-3px);
+          border-color:
+            #94a3b8;
+          box-shadow:
+            0 14px 32px
+            rgba(
+              15,
+              23,
+              42,
+              .08
+            );
+        }
+
+        .boost-package-card.selected {
+          border-color: #0f766e;
+          box-shadow:
+            0 14px 34px
+            rgba(
+              15,
+              118,
+              110,
+              .14
+            );
+        }
+
+        .boost-package-card strong,
+        .boost-package-days,
+        .boost-package-description {
+          display: block;
+        }
+
+        .boost-package-days {
+          margin-top: 18px;
+          color: #475569;
+          font-weight: 800;
+        }
+
+        .boost-package-card strong {
+          margin: 7px 0 12px;
+          font-size: 28px;
+        }
+
+        .boost-package-description {
+          color: #64748b;
+          line-height: 1.5;
+          font-size: 14px;
+        }
+
+        .boost-package-check {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          width: 28px;
+          height: 28px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #f1f5f9;
+          color: white;
+          font-weight: 900;
+        }
+
+        .boost-package-card.selected
+        .boost-package-check {
+          background: #0f766e;
+        }
+
+        .boost-popular {
+          position: absolute;
+          top: 0;
+          left: 22px;
+          transform:
+            translateY(-50%);
+          padding: 5px 9px;
+          border-radius: 999px;
+          background: #2563eb;
+          color: white;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: .08em;
+        }
+
+        .boost-payment-card {
+          padding: 26px;
+        }
+
+        .boost-payment-card h2 {
+          margin: 8px 0 4px;
+        }
+
+        .boost-payment-card label {
+          display: block;
+          margin: 20px 0 8px;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .boost-payment-card input {
+          width: 100%;
+          box-sizing: border-box;
+          min-height: 52px;
+          padding: 0 15px;
+          border: 1px solid #cbd5e1;
+          border-radius: 12px;
+          font-size: 16px;
+          outline: none;
+        }
+
+        .boost-payment-card input:focus {
+          border-color: #0f766e;
+          box-shadow:
+            0 0 0 3px
+            rgba(
+              15,
+              118,
+              110,
+              .1
+            );
+        }
+
+        .boost-pay-button,
+        .boost-secondary-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 52px;
+          border: 0;
+          border-radius: 12px;
+          margin-top: 14px;
+          padding: 0 20px;
+          background: #0f766e;
+          color: white;
+          font-weight: 850;
+          text-decoration: none;
+          cursor: pointer;
+        }
+
+        .boost-pay-button {
+          width: 100%;
+        }
+
+        .boost-pay-button:hover:not(:disabled) {
+          background: #115e59;
+        }
+
+        .boost-pay-button:disabled {
+          opacity: .55;
+          cursor: not-allowed;
+        }
+
+        .boost-secure-note {
+          margin: 12px 0 0;
+          font-size: 12px;
+        }
+
+        .boost-loading,
+        .boost-error-state {
+          min-height: 70vh;
+          display: grid;
+          place-items: center;
+          align-content: center;
+          text-align: center;
+        }
+
+        .boost-spinner {
+          width: 38px;
+          height: 38px;
+          border: 4px solid #dbeafe;
+          border-top-color: #2563eb;
+          border-radius: 50%;
+          animation:
+            boost-spin .8s
+            linear infinite;
+        }
+
+        .boost-icon {
+          font-size: 40px;
+        }
+
+        @keyframes boost-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @media (max-width: 760px) {
+
+          .boost-packages {
+            grid-template-columns: 1fr;
+          }
+
+          .boost-property-card {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .boost-topbar {
+            margin-bottom: 30px;
+          }
+        }
+
+        @media (max-width: 480px) {
+
+          .boost-page {
+            padding:
+              16px 12px 40px;
+          }
+
+          .boost-payment-card,
+          .boost-property-card {
+            padding: 18px;
+            border-radius: 18px;
+          }
+
+          .boost-package-card {
+            min-height: 190px;
+            padding: 20px;
+          }
+
+          .boost-header h1 {
+            font-size: 36px;
+          }
+
+        }
+
+      `}</style>
+    </div>
   );
 }
+
+export default BoostProperty;

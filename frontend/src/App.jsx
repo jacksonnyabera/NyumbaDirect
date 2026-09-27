@@ -1625,8 +1625,13 @@ function App() {
             />
           }
         />
+        <Route
+           path="/boost-property/:propertyId"
+           element={<BoostProperty />}
+        />
 
       </Routes>
+
 
 
       <AIHelpAssistant />
