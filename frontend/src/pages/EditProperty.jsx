@@ -757,11 +757,11 @@ function EditProperty() {
                 >
 
                   <img
-                    src={`http://127.0.0.1:8000${photo.image_url}`}
-                    alt={
-                      photo.caption ||
-                      "Property photo"
-                    }
+                     src={
+                        photo.image_url?.startsWith("http")
+                         ? photo.image_url
+                         : `${import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"}${photo.image_url}`
+                  }
                   />
 
                   {photo.is_primary && (

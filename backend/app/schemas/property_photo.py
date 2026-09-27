@@ -4,8 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class PropertyPhotoCreate(BaseModel):
-    image_url: str = Field(
-        min_length=1,
+    image_url: str | None = Field(
+        default=None,
         max_length=500,
     )
 

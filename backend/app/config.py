@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     mpesa_shortcode: str = ""
     mpesa_callback_url: str = ""
     mpesa_environment: str = "sandbox"
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
 
 
 @lru_cache
