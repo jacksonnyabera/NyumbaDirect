@@ -8210,3 +8210,275 @@ table {
   transform: translateY(-1px);
   opacity: 0.9;
 }
+/* =========================================================
+   NYUMBADIRECT - PROPERTY BOOST
+   ========================================================= */
+
+.boost-page {
+  min-height: 100vh;
+  padding: 40px 20px 70px;
+  background: #f6f8fb;
+}
+
+.boost-container {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.boost-back-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 15px;
+  margin-bottom: 25px;
+  padding: 8px 0;
+}
+
+.boost-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.boost-badge {
+  display: inline-block;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: #fff0d9;
+  margin-bottom: 14px;
+}
+
+.boost-header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(32px, 5vw, 48px);
+}
+
+.boost-header > p {
+  max-width: 650px;
+  margin: 0 auto 25px;
+  color: #667085;
+  line-height: 1.7;
+}
+
+.boost-property-summary {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 18px;
+  background: white;
+  border: 1px solid #e6eaf0;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+}
+
+.boost-property-summary h2 {
+  margin: 0 0 6px;
+}
+
+.boost-property-summary p {
+  margin: 0;
+  color: #667085;
+}
+
+.boost-packages {
+  margin-top: 30px;
+}
+
+.boost-packages > h2,
+.boost-section-description {
+  text-align: center;
+}
+
+.boost-section-description {
+  color: #667085;
+  margin-bottom: 25px;
+}
+
+.boost-package-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.boost-package-card {
+  position: relative;
+  text-align: left;
+  padding: 28px;
+  border-radius: 22px;
+  background: white;
+  border: 2px solid #e6eaf0;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.boost-package-card:hover,
+.boost-package-card.selected {
+  transform: translateY(-4px);
+  border-color: #111827;
+  box-shadow: 0 14px 35px rgba(0,0,0,0.10);
+}
+
+.boost-package-card.selected {
+  background: #fffdf7;
+}
+
+.boost-popular {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  background: #111827;
+  color: white;
+}
+
+.boost-package-icon {
+  font-size: 34px;
+  margin-bottom: 18px;
+}
+
+.boost-package-card h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.boost-duration {
+  color: #667085;
+  margin-bottom: 12px;
+}
+
+.boost-price {
+  font-size: 30px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.boost-package-card p {
+  color: #667085;
+  line-height: 1.6;
+  min-height: 52px;
+}
+
+.boost-select-indicator {
+  margin-top: 20px;
+  padding: 11px;
+  text-align: center;
+  border-radius: 10px;
+  background: #f2f4f7;
+  font-weight: 700;
+}
+
+.boost-package-card.selected .boost-select-indicator {
+  background: #111827;
+  color: white;
+}
+
+.boost-payment-card {
+  max-width: 650px;
+  margin: 40px auto 0;
+  padding: 30px;
+  border-radius: 22px;
+  background: white;
+  border: 1px solid #e6eaf0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.boost-payment-card h2 {
+  margin-top: 0;
+}
+
+.boost-payment-card label {
+  display: block;
+  margin: 22px 0 8px;
+  font-weight: 700;
+}
+
+.boost-payment-card input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.boost-payment-card small {
+  display: block;
+  margin-top: 8px;
+  color: #667085;
+}
+
+.boost-pay-btn {
+  width: 100%;
+  margin-top: 22px;
+  padding: 15px;
+  border: none;
+  border-radius: 11px;
+  background: #111827;
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.boost-pay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.boost-error,
+.boost-success {
+  margin-top: 15px;
+  padding: 13px;
+  border-radius: 10px;
+}
+
+.boost-error {
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.boost-success {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.boost-trust {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin-top: 25px;
+  color: #667085;
+  font-size: 14px;
+}
+
+@media (max-width: 800px) {
+  .boost-package-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .boost-package-card p {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .boost-page {
+    padding: 25px 14px 50px;
+  }
+
+  .boost-payment-card,
+  .boost-package-card {
+    padding: 22px;
+  }
+
+  .boost-trust {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+}
+

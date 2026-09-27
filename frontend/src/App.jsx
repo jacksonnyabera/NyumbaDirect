@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -20,6 +20,7 @@ import Conversations from "./pages/Conversations";
 import Messages from "./pages/Messages";
 import SavedHomes from "./pages/SavedHomes";
 import Navigation from "./components/Navigation";
+import BoostProperty from "./pages/BoostProperty";
 
 
 function Home() {
@@ -36,7 +37,7 @@ function Home() {
           <div className="hero-content">
 
             <div className="hero-badge">
-              <span>✓</span>
+              <span>âœ“</span>
               Trusted property marketplace
             </div>
 
@@ -53,7 +54,7 @@ function Home() {
             <p className="hero-text">
               Discover quality rental properties and
               connect directly with landlords and property
-              managers — without unnecessary middlemen.
+              managers â€” without unnecessary middlemen.
             </p>
 
             <div className="hero-actions">
@@ -63,7 +64,7 @@ function Home() {
                 className="search-btn"
               >
                 Browse Homes
-                <span>→</span>
+                <span>â†’</span>
               </Link>
 
               <Link
@@ -78,17 +79,17 @@ function Home() {
             <div className="hero-trust">
 
               <div>
-                <strong>✓</strong>
+                <strong>âœ“</strong>
                 Verified listings
               </div>
 
               <div>
-                <strong>✓</strong>
+                <strong>âœ“</strong>
                 Direct communication
               </div>
 
               <div>
-                <strong>✓</strong>
+                <strong>âœ“</strong>
                 Simple house hunting
               </div>
 
@@ -103,10 +104,10 @@ function Home() {
             <div className="house-card">
 
               <div className="house-placeholder">
-                <span>🏡</span>
+                <span>ðŸ¡</span>
 
                 <div className="verified-badge">
-                  ✓ Verified
+                  âœ“ Verified
                 </div>
               </div>
 
@@ -120,7 +121,7 @@ function Home() {
                     </strong>
 
                     <span>
-                      📍 Nairobi, Kenya
+                      ðŸ“ Nairobi, Kenya
                     </span>
                   </div>
 
@@ -129,15 +130,15 @@ function Home() {
                     className="favorite-btn"
                     aria-label="Save property"
                   >
-                    ♡
+                    â™¡
                   </button>
 
                 </div>
 
                 <div className="house-meta">
-                  <span>🛏 3 Beds</span>
-                  <span>🚿 2 Baths</span>
-                  <span>🏠 House</span>
+                  <span>ðŸ› 3 Beds</span>
+                  <span>ðŸš¿ 2 Baths</span>
+                  <span>ðŸ  House</span>
                 </div>
 
                 <div className="price">
@@ -180,7 +181,7 @@ function Home() {
             <div className="feature-card">
 
               <div className="feature-icon">
-                ✓
+                âœ“
               </div>
 
               <h3>
@@ -199,7 +200,7 @@ function Home() {
             <div className="feature-card">
 
               <div className="feature-icon">
-                💬
+                ðŸ’¬
               </div>
 
               <h3>
@@ -217,7 +218,7 @@ function Home() {
             <div className="feature-card">
 
               <div className="feature-icon">
-                🔍
+                ðŸ”
               </div>
 
               <h3>
@@ -272,7 +273,7 @@ function Home() {
               Find a home in the place that fits your life
             </h2>
             <p>
-              Discover quality rental options across Kenya’s most active property markets.
+              Discover quality rental options across Kenyaâ€™s most active property markets.
             </p>
           </div>
 
@@ -284,7 +285,7 @@ function Home() {
               <h3>Kilimani & Westlands</h3>
               <p>Professionally managed apartments and family homes near work, study and lifestyle hubs.</p>
               <Link to="/properties" className="city-link">
-                Explore Nairobi <span>→</span>
+                Explore Nairobi <span>â†’</span>
               </Link>
             </div>
 
@@ -295,7 +296,7 @@ function Home() {
               <h3>Coastal Living</h3>
               <p>Homes near the coast, business districts and relaxed neighbourhoods.</p>
               <Link to="/properties" className="city-link">
-                Explore Mombasa <span>→</span>
+                Explore Mombasa <span>â†’</span>
               </Link>
             </div>
 
@@ -306,7 +307,7 @@ function Home() {
               <h3>Lake Region Rentals</h3>
               <p>Comfortable homes, family apartments and town rentals with local convenience.</p>
               <Link to="/properties" className="city-link">
-                Explore Kisumu <span>→</span>
+                Explore Kisumu <span>â†’</span>
               </Link>
             </div>
           </div>
@@ -368,7 +369,7 @@ function Home() {
             to="/properties"
             className="search-btn"
           >
-            Explore Properties →
+            Explore Properties â†’
           </Link>
 
         </section>
@@ -421,7 +422,7 @@ function Home() {
         </div>
 
         <div className="footer-bottom">
-          © {new Date().getFullYear()} NyumbaDirect.
+          Â© {new Date().getFullYear()} NyumbaDirect.
           All rights reserved.
         </div>
 
@@ -666,7 +667,7 @@ function AIHelpAssistant() {
   const [answers, setAnswers] = useState([
     {
       from: "assistant",
-      text: "Hi, I’m NyumbaDirect AI Help. Ask about rents, homes, locations or listing steps.",
+      text: "Hi, Iâ€™m NyumbaDirect AI Help. Ask about rents, homes, locations or listing steps.",
     },
   ]);
 
@@ -715,7 +716,7 @@ function AIHelpAssistant() {
         onClick={() => setOpen((value) => !value)}
         aria-label="Open NyumbaDirect AI help"
       >
-        {open ? "×" : "AI"}
+        {open ? "Ã—" : "AI"}
       </button>
 
       {open && (
@@ -726,7 +727,7 @@ function AIHelpAssistant() {
               <h3>Home Help</h3>
             </div>
             <button type="button" className="ai-help-close" onClick={() => setOpen(false)}>
-              ×
+              Ã—
             </button>
           </div>
 
@@ -765,7 +766,7 @@ function App() {
     <BrowserRouter>
       <AppSEO />
 
-      <Routes>
+      <Routes>`r`n          <Route path="/boost/:propertyId" element={<BoostProperty />} />
 
         {/* HOME */}
         <Route
@@ -838,4 +839,7 @@ function App() {
 }
 
 export default App;
+
+
+
 
