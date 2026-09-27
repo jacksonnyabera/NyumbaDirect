@@ -1,176 +1,277 @@
+﻿import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
 
 function Navigation() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const token = localStorage.getItem("access_token");
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    setMenuOpen(false);
+    navigate("/login");
+  };
 
   const closeMenu = () => {
     setMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user");
-    closeMenu();
-    navigate("/login");
-  };
-
   return (
-    <header className="site-header">
-      <div className="site-header-inner">
+    <header className="site-navigation">
 
-        {/* LOGO */}
-        <Link to="/" className="site-logo" onClick={closeMenu}>
-          <span className="site-logo-mark">N</span>
-          <span className="site-logo-text">
+      <div className="navigation-inner">
+
+        {/* =================================================
+            BRAND
+            ================================================= */}
+
+        <Link
+          to="/"
+          className="nd-brand"
+          onClick={closeMenu}
+          aria-label="NyumbaDirect home"
+        >
+
+          <span className="nd-brand-mark">
+            N
+          </span>
+
+          <span className="nd-brand-name">
             Nyumba<span>Direct</span>
           </span>
+
         </Link>
 
-        {/* DESKTOP NAVIGATION */}
-        <nav className="desktop-navigation">
-          <NavLink to="/" end>
+
+        {/* =================================================
+            DESKTOP NAVIGATION
+            ================================================= */}
+
+        <nav className="nd-desktop-nav">
+
+          <Link
+            to="/"
+            className={
+              location.pathname === "/"
+                ? "active"
+                : ""
+            }
+          >
             Home
-          </NavLink>
+          </Link>
 
-          <NavLink to="/properties">
+          <Link
+            to="/properties"
+            className={
+              location.pathname.startsWith("/properties")
+                ? "active"
+                : ""
+            }
+          >
             Find a Home
-          </NavLink>
+          </Link>
 
-          {token && (
-            <>
-              <NavLink to="/saved-homes">
-                Saved Homes
-              </NavLink>
+          <a href="/#how-it-works">
+            How It Works
+          </a>
 
-              <NavLink to="/messages">
-                Messages
-              </NavLink>
+          {token ? (
 
-              <NavLink to="/dashboard">
-                Dashboard
-              </NavLink>
-            </>
-          )}
+            <Link
+              to="/dashboard"
+              className={
+                location.pathname.startsWith("/dashboard")
+                  ? "active"
+                  : ""
+              }
+            >
+              Dashboard
+            </Link>
+
+          ) : null}
+
         </nav>
 
-        {/* DESKTOP ACTIONS */}
-        <div className="desktop-navigation-actions">
+
+        {/* =================================================
+            DESKTOP ACTIONS
+            ================================================= */}
+
+        <div className="nd-navigation-actions">
+
           {token ? (
-            <button
-              type="button"
-              className="nav-logout-button"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          ) : (
+
             <>
-              <Link to="/login" className="nav-login-button">
-                Login
-              </Link>
 
-              <Link to="/register" className="nav-register-button">
-                Create Account
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* MOBILE MENU BUTTON */}
-        <button
-          type="button"
-          className={`mobile-menu-button ${
-            menuOpen ? "menu-open" : ""
-          }`}
-          onClick={() => setMenuOpen((previous) => !previous)}
-          aria-label={
-            menuOpen ? "Close navigation menu" : "Open navigation menu"
-          }
-          aria-expanded={menuOpen}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
-
-      {/* MOBILE NAVIGATION */}
-      {menuOpen && (
-        <div className="mobile-navigation">
-
-          <NavLink
-            to="/"
-            end
-            onClick={closeMenu}
-          >
-            🏠 Home
-          </NavLink>
-
-          <NavLink
-            to="/properties"
-            onClick={closeMenu}
-          >
-            🔎 Find a Home
-          </NavLink>
-
-          {token && (
-            <>
-              <NavLink
-                to="/saved-homes"
-                onClick={closeMenu}
-              >
-                ❤️ Saved Homes
-              </NavLink>
-
-              <NavLink
+              <Link
                 to="/messages"
-                onClick={closeMenu}
+                className="nd-nav-message"
               >
-                💬 Messages
-              </NavLink>
-
-              <NavLink
-                to="/dashboard"
-                onClick={closeMenu}
-              >
-                📊 Dashboard
-              </NavLink>
+                Messages
+              </Link>
 
               <button
                 type="button"
-                className="mobile-logout-button"
+                className="nd-nav-logout"
                 onClick={handleLogout}
               >
                 Logout
               </button>
-            </>
-          )}
 
-          {!token && (
-            <div className="mobile-auth-actions">
+            </>
+
+          ) : (
+
+            <>
+
               <Link
                 to="/login"
-                onClick={closeMenu}
-                className="mobile-login-button"
+                className="nd-nav-login"
               >
                 Login
               </Link>
 
               <Link
                 to="/register"
-                onClick={closeMenu}
-                className="mobile-register-button"
+                className="nd-nav-signup"
               >
-                Create Account
+                Get Started
               </Link>
-            </div>
+
+            </>
+
           )}
+
         </div>
-      )}
+
+
+        {/* =================================================
+            MOBILE MENU BUTTON
+            ================================================= */}
+
+        <button
+          type="button"
+          className={`nd-mobile-menu-button ${
+            menuOpen ? "open" : ""
+          }`}
+          onClick={() =>
+            setMenuOpen(
+              (value) => !value
+            )
+          }
+          aria-label="Toggle navigation menu"
+          aria-expanded={menuOpen}
+        >
+
+          <span></span>
+          <span></span>
+          <span></span>
+
+        </button>
+
+      </div>
+
+
+      {/* =================================================
+          MOBILE NAVIGATION
+          ================================================= */}
+
+      <div
+        className={`nd-mobile-menu ${
+          menuOpen ? "open" : ""
+        }`}
+      >
+
+        <Link
+          to="/"
+          onClick={closeMenu}
+          className={
+            location.pathname === "/"
+              ? "active"
+              : ""
+          }
+        >
+          Home
+        </Link>
+
+
+        <Link
+          to="/properties"
+          onClick={closeMenu}
+          className={
+            location.pathname.startsWith("/properties")
+              ? "active"
+              : ""
+          }
+        >
+          Find a Home
+        </Link>
+
+
+        <a
+          href="/#how-it-works"
+          onClick={closeMenu}
+        >
+          How It Works
+        </a>
+
+
+        {token ? (
+
+          <>
+
+            <Link
+              to="/dashboard"
+              onClick={closeMenu}
+            >
+              Dashboard
+            </Link>
+
+            <Link
+              to="/messages"
+              onClick={closeMenu}
+            >
+              Messages
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+
+          </>
+
+        ) : (
+
+          <>
+
+            <Link
+              to="/login"
+              onClick={closeMenu}
+            >
+              Login
+            </Link>
+
+            <Link
+              to="/register"
+              onClick={closeMenu}
+              className="mobile-signup"
+            >
+              Get Started
+            </Link>
+
+          </>
+
+        )}
+
+      </div>
+
     </header>
   );
 }
