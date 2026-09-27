@@ -17,7 +17,10 @@ from app.dependencies import get_current_user
 from app.models.property import Property
 from app.models.property_photo import PropertyPhoto
 from app.models.user import User
-from app.services.cloudinary import upload_property_image
+from app.services.cloudinary import (
+    delete_property_image,
+    upload_property_image,
+)
 
 router = APIRouter(
     prefix="/properties",
@@ -38,11 +41,8 @@ def upload_property_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Find property
     property_obj = db.scalar(
-        select(Property).where(
-            Property.id == property_id
-        )
+        select(Property).where(Property.id == property_id)
     )
 
     if not property_obj:
@@ -51,14 +51,12 @@ def upload_property_photo(
             detail="Property not found.",
         )
 
-    # Only the owner can upload photos
     if property_obj.owner_id != current_user.id:
         raise HTTPException(
             status_code=403,
             detail="You can only upload photos to your own property.",
         )
 
-    # Validate file type
     allowed_types = {
         "image/jpeg",
         "image/png",
@@ -71,7 +69,6 @@ def upload_property_photo(
             detail="Only JPEG, PNG and WebP images are allowed.",
         )
 
-    # Validate file size
     max_size = 10 * 1024 * 1024
 
     file_content = file.file.read()
@@ -82,23 +79,16 @@ def upload_property_photo(
             detail="Image must be 10MB or smaller.",
         )
 
-    # Reset file pointer
     file.file.seek(0)
 
     try:
-        upload_result = upload_property_image(
-            file.file
-        )
-    except Exception as exc:
+        upload_result = upload_property_image(file.file)
+    except Exception:
         raise HTTPException(
             status_code=502,
-            detail=f"Image upload failed: {str(exc)}",
+            detail="Image upload failed. Please try again.",
         )
 
-    image_url = upload_result["url"]
-
-    # If this is primary, remove primary status from
-    # existing photos
     if is_primary:
         existing_photos = db.scalars(
             select(PropertyPhoto).where(
@@ -111,7 +101,8 @@ def upload_property_photo(
 
     photo = PropertyPhoto(
         property_id=property_id,
-        image_url=image_url,
+        image_url=upload_result["url"],
+        cloudinary_public_id=upload_result["public_id"],
         caption=caption,
         is_primary=is_primary,
         display_order=display_order,
@@ -133,9 +124,7 @@ def get_property_photos(
     db: Session = Depends(get_db),
 ):
     property_obj = db.scalar(
-        select(Property).where(
-            Property.id == property_id
-        )
+        select(Property).where(Property.id == property_id)
     )
 
     if not property_obj:
@@ -160,16 +149,18 @@ def get_property_photos(
 
 
 @router.delete(
-    "/photos/{photo_id}",
+    "/{property_id}/photos/{photo_id}",
 )
 def delete_property_photo(
+    property_id: int,
     photo_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     photo = db.scalar(
         select(PropertyPhoto).where(
-            PropertyPhoto.id == photo_id
+            PropertyPhoto.id == photo_id,
+            PropertyPhoto.property_id == property_id,
         )
     )
 
@@ -181,7 +172,7 @@ def delete_property_photo(
 
     property_obj = db.scalar(
         select(Property).where(
-            Property.id == photo.property_id
+            Property.id == property_id
         )
     )
 
@@ -196,6 +187,21 @@ def delete_property_photo(
             status_code=403,
             detail="You can only delete your own property photos.",
         )
+
+    # Remove the actual image from Cloudinary.
+    if photo.cloudinary_public_id:
+        try:
+            delete_property_image(
+                photo.cloudinary_public_id
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "The image could not be removed from "
+                    "image storage. Please try again."
+                ),
+            )
 
     db.delete(photo)
     db.commit()

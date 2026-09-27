@@ -26,3 +26,12 @@ def upload_property_image(file):
         "url": result["secure_url"],
         "public_id": result["public_id"],
     }
+
+
+def delete_property_image(public_id: str):
+    configure_cloudinary()
+
+    return cloudinary.uploader.destroy(
+        public_id,
+        resource_type="image",
+    )

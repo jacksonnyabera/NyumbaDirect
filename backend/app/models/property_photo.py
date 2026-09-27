@@ -34,6 +34,11 @@ class PropertyPhoto(Base):
         String(500),
         nullable=False,
     )
+    cloudinary_public_id: Mapped[str | None] = mapped_column(
+       String(255),
+       nullable=True,
+       index=True,
+    )
 
     caption: Mapped[str | None] = mapped_column(
         String(255),
