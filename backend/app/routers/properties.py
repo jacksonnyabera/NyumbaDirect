@@ -1,12 +1,13 @@
-from decimal import Decimal
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
-from app.dependencies import require_landlord_or_manager
+from app.dependencies import get_current_user, require_landlord_or_manager
 from app.models.property import Property
+from app.models.property_photo import PropertyPhoto
 from app.models.user import User
 from app.schemas.property import (
     PropertyCreate,
@@ -14,8 +15,6 @@ from app.schemas.property import (
     PropertyResponse,
     PropertyUpdate,
 )
-from app.services.notifications import NotificationService
-
 
 router = APIRouter(
     prefix="/properties",
@@ -23,44 +22,47 @@ router = APIRouter(
 )
 
 
+# ============================================================
+# CREATE PROPERTY
+# ============================================================
+
 @router.post(
     "",
     response_model=PropertyResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_property(
-    property_data: PropertyCreate,
-    current_user: User = Depends(require_landlord_or_manager),
+    data: PropertyCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_landlord_or_manager),
 ):
-    property_values = property_data.model_dump()
+    property_data = data.model_dump()
 
-    # Ownership must always come from the authenticated user.
-    property_values.pop("owner_id", None)
+    # Never allow the client to assign ownership
+    property_data.pop("owner_id", None)
 
-    # Verification must never be self-assigned during creation.
-    property_values.pop("is_verified", None)
+    # New properties are not automatically verified
+    property_data["is_verified"] = False
 
-    property_values["is_verified"] = False
+    # New properties are not automatically featured
+    property_data["is_featured"] = False
+    property_data["featured_until"] = None
 
-    new_property = Property(
+    property_obj = Property(
         owner_id=current_user.id,
-        **property_values,
+        **property_data,
     )
 
-    db.add(new_property)
+    db.add(property_obj)
     db.commit()
-    db.refresh(new_property)
+    db.refresh(property_obj)
 
-    NotificationService.send_property_created_email(
-        to_email=current_user.email,
-        title=new_property.title,
-        town=new_property.town,
-        rent=f"KSh {new_property.monthly_rent:.2f}",
-    )
+    return property_obj
 
-    return new_property
 
+# ============================================================
+# LIST PROPERTIES
+# ============================================================
 
 @router.get(
     "",
@@ -71,66 +73,15 @@ def list_properties(
     town: str | None = None,
     area: str | None = None,
     property_type: str | None = None,
-    min_rent: Decimal | None = None,
-    max_rent: Decimal | None = None,
-    min_bedrooms: int | None = Query(
-        default=None,
-        ge=0,
-    ),
-    max_bedrooms: int | None = Query(
-        default=None,
-        ge=0,
-    ),
+    min_rent: float | None = Query(default=None, ge=0),
+    max_rent: float | None = Query(default=None, ge=0),
+    min_bedrooms: int | None = Query(default=None, ge=0),
+    max_bedrooms: int | None = Query(default=None, ge=0),
     verified_only: bool = False,
-    skip: int = Query(
-        default=0,
-        ge=0,
-    ),
-    limit: int = Query(
-        default=20,
-        ge=1,
-        le=100,
-    ),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    if (
-        min_rent is not None
-        and min_rent < 0
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Minimum rent cannot be negative.",
-        )
-
-    if (
-        max_rent is not None
-        and max_rent < 0
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum rent cannot be negative.",
-        )
-
-    if (
-        min_rent is not None
-        and max_rent is not None
-        and min_rent > max_rent
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Minimum rent cannot be greater than maximum rent.",
-        )
-
-    if (
-        min_bedrooms is not None
-        and max_bedrooms is not None
-        and min_bedrooms > max_bedrooms
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Minimum bedrooms cannot be greater than maximum bedrooms.",
-        )
-
     query = (
         select(Property)
         .options(
@@ -140,92 +91,95 @@ def list_properties(
         .where(Property.is_available.is_(True))
     )
 
-    if county:
-        county = county.strip()
+    # --------------------------------------------------------
+    # FILTERS
+    # --------------------------------------------------------
 
-        if county:
-            query = query.where(
-                Property.county.ilike(
-                    f"%{county}%"
-                )
-            )
+    if county:
+        query = query.where(Property.county.ilike(f"%{county}%"))
 
     if town:
-        town = town.strip()
-
-        if town:
-            query = query.where(
-                Property.town.ilike(
-                    f"%{town}%"
-                )
-            )
+        query = query.where(Property.town.ilike(f"%{town}%"))
 
     if area:
-        area = area.strip()
-
-        if area:
-            query = query.where(
-                Property.area.ilike(
-                    f"%{area}%"
-                )
-            )
+        query = query.where(Property.area.ilike(f"%{area}%"))
 
     if property_type:
-        property_type = property_type.strip()
-
-        if property_type:
-            query = query.where(
-                Property.property_type
-                == property_type
-            )
+        query = query.where(
+            Property.property_type.ilike(f"%{property_type}%")
+        )
 
     if min_rent is not None:
-        query = query.where(
-            Property.monthly_rent >= min_rent
-        )
+        query = query.where(Property.monthly_rent >= min_rent)
 
     if max_rent is not None:
-        query = query.where(
-            Property.monthly_rent <= max_rent
-        )
+        query = query.where(Property.monthly_rent <= max_rent)
 
     if min_bedrooms is not None:
-        query = query.where(
-            Property.bedrooms >= min_bedrooms
-        )
+        query = query.where(Property.bedrooms >= min_bedrooms)
 
     if max_bedrooms is not None:
-        query = query.where(
-            Property.bedrooms <= max_bedrooms
-        )
+        query = query.where(Property.bedrooms <= max_bedrooms)
 
     if verified_only:
-        query = query.join(
-            User,
-            Property.owner_id == User.id,
-        ).where(
-            User.is_verified.is_(True)
-        )
+        query = query.where(Property.is_verified.is_(True))
 
-    total = db.scalar(
-        select(func.count())
-        .select_from(query.subquery())
+    # --------------------------------------------------------
+    # TOTAL COUNT
+    # --------------------------------------------------------
+
+    count_query = select(func.count()).select_from(
+        query.order_by(None).subquery()
     )
+
+    total = db.scalar(count_query) or 0
+
+    # --------------------------------------------------------
+    # FEATURED PROPERTY PRIORITY
+    #
+    # A property is considered actively featured only when:
+    # - is_featured = True
+    # - featured_until exists
+    # - featured_until is still in the future
+    # --------------------------------------------------------
+
+    now = datetime.now(timezone.utc)
+
+    featured_order = case(
+        (
+            (Property.is_featured.is_(True))
+            & (Property.featured_until.is_not(None))
+            & (Property.featured_until > now),
+            1,
+        ),
+        else_=0,
+    )
+
+    # --------------------------------------------------------
+    # GET PROPERTIES
+    # --------------------------------------------------------
 
     properties = db.scalars(
         query
-        .order_by(Property.created_at.desc())
+        .order_by(
+            featured_order.desc(),
+            Property.created_at.desc(),
+        )
         .offset(skip)
         .limit(limit)
     ).unique().all()
 
     return PropertyListResponse(
         items=properties,
-        total=total or 0,
+        total=total,
         skip=skip,
         limit=limit,
     )
 
+
+# ============================================================
+# GET SINGLE PROPERTY
+# ============================================================
 
 @router.get(
     "/{property_id}",
@@ -246,19 +200,16 @@ def get_property(
 
     if not property_obj:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="Property not found.",
-        )
-
-    if property_obj.owner and property_obj.owner.email:
-        NotificationService.send_profile_visit_email(
-            to_email=property_obj.owner.email,
-            owner_name=property_obj.owner.full_name,
-            property_title=property_obj.title,
         )
 
     return property_obj
 
+
+# ============================================================
+# UPDATE PROPERTY
+# ============================================================
 
 @router.put(
     "/{property_id}",
@@ -266,45 +217,36 @@ def get_property(
 )
 def update_property(
     property_id: int,
-    property_data: PropertyUpdate,
-    current_user: User = Depends(
-        require_landlord_or_manager
-    ),
+    data: PropertyUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     property_obj = db.scalar(
-        select(Property)
-        .options(joinedload(Property.owner))
-        .where(Property.id == property_id)
+        select(Property).where(Property.id == property_id)
     )
 
     if not property_obj:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="Property not found.",
         )
 
     if property_obj.owner_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own properties.",
+            status_code=403,
+            detail="You can only update your own property.",
         )
 
-    update_data = property_data.model_dump(
-        exclude_unset=True,
-    )
+    update_data = data.model_dump(exclude_unset=True)
 
-    # Protected fields cannot be changed through
-    # the normal property update endpoint.
+    # Prevent users from changing protected fields
     update_data.pop("owner_id", None)
     update_data.pop("is_verified", None)
+    update_data.pop("is_featured", None)
+    update_data.pop("featured_until", None)
 
     for field, value in update_data.items():
-        setattr(
-            property_obj,
-            field,
-            value,
-        )
+        setattr(property_obj, field, value)
 
     db.commit()
     db.refresh(property_obj)
@@ -312,33 +254,33 @@ def update_property(
     return property_obj
 
 
+# ============================================================
+# DELETE PROPERTY
+# ============================================================
+
 @router.delete(
     "/{property_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_property(
     property_id: int,
-    current_user: User = Depends(
-        require_landlord_or_manager
-    ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     property_obj = db.scalar(
-        select(Property).where(
-            Property.id == property_id
-        )
+        select(Property).where(Property.id == property_id)
     )
 
     if not property_obj:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="Property not found.",
         )
 
     if property_obj.owner_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete your own properties.",
+            status_code=403,
+            detail="You can only delete your own property.",
         )
 
     db.delete(property_obj)
