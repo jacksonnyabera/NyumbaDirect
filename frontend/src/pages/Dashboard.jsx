@@ -12,6 +12,9 @@ function Dashboard() {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [promotions, setPromotions] = useState([]);
+  const [paymentChecking, setPaymentChecking] = useState({});
+  const [retryingPromotion, setRetryingPromotion] = useState(null);
 
   const navigate = useNavigate();
 
@@ -46,6 +49,7 @@ function Dashboard() {
 
         if (isLandlord) {
           requests.push(api.get("/properties"));
+          requests.push(api.get("/promotions/my"));
         }
 
         const responses = await Promise.all(requests);
@@ -58,6 +62,10 @@ function Dashboard() {
               responses[1].data ||
               []
           );
+        }
+
+        if (isLandlord && responses[2]) {
+          setPromotions(responses[2].data || []);
         }
       } catch (err) {
         console.error(err);
@@ -121,51 +129,196 @@ function Dashboard() {
     }
   };
 
-  const handleBoost = async (propertyId, packageName) => {
-  try {
-    const promotionResponse = await api.post("/promotions", {
-      property_id: propertyId,
-      package: packageName,
-    });
-
-    const promotion = promotionResponse.data;
-
-    const phoneNumber = window.prompt(
-      "Enter the M-Pesa phone number to pay with:\n\nExample: 0712345678"
-    );
-
-    if (!phoneNumber) {
-      return;
+  const loadPromotions = async () => {
+    try {
+      const response = await api.get("/promotions/my");
+      setPromotions(response.data || []);
+    } catch (err) {
+      console.error("Unable to load promotions:", err);
     }
+  };
 
-    const paymentResponse = await api.post(
+  const handlePaymentStatus = async (promotionId) => {
+    try {
+      setPaymentChecking((current) => ({
+        ...current,
+        [promotionId]: true,
+      }));
+
+      const response = await api.get(
+        `/payments/mpesa/status/${promotionId}`
+      );
+
+      setPromotions((current) =>
+        current.map((promotion) =>
+          promotion.id === promotionId
+            ? { ...promotion, ...response.data }
+            : promotion
+        )
+      );
+
+      return response.data;
+    } catch (err) {
+      console.error("Unable to check payment status:", err);
+      return null;
+    } finally {
+      setPaymentChecking((current) => ({
+        ...current,
+        [promotionId]: false,
+      }));
+    }
+  };
+
+  const sendPayment = async (promotionId, phoneNumber) => {
+    const response = await api.post(
       "/payments/mpesa/stk-push",
       {
-        promotion_id: promotion.id,
+        promotion_id: promotionId,
         phone_number: phoneNumber,
       }
     );
 
-    alert(
-      paymentResponse.data.message ||
-        "M-Pesa payment request sent. Check your phone and enter your M-Pesa PIN."
+    setPromotions((current) =>
+      current.map((promotion) =>
+        promotion.id === promotionId
+          ? {
+              ...promotion,
+              payment_status: "PENDING",
+              phone_number: phoneNumber,
+              checkout_request_id:
+                response.data?.checkout_request_id ||
+                promotion.checkout_request_id,
+              merchant_request_id:
+                response.data?.merchant_request_id ||
+                promotion.merchant_request_id,
+            }
+          : promotion
+      )
     );
-  } catch (err) {
-    console.error(err);
 
-    if (err.response?.status === 401) {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user_id");
-      navigate("/login");
-      return;
+    return response.data;
+  };
+
+  const waitForPayment = async (promotionId) => {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      const result = await handlePaymentStatus(promotionId);
+      const status = String(
+        result?.payment_status || ""
+      ).toUpperCase();
+
+      if (status === "PAID") {
+        alert(
+          "Payment received successfully! Your property boost is now active."
+        );
+        await loadPromotions();
+        return;
+      }
+
+      if (status === "FAILED") {
+        alert(
+          result?.result_description ||
+            "Payment failed. You can retry with the correct M-Pesa number."
+        );
+        await loadPromotions();
+        return;
+      }
     }
+  };
 
-    alert(
-      err.response?.data?.detail ||
-        "Unable to start M-Pesa payment."
-    );
-  }
-};
+  const handleBoost = async (propertyId, packageName) => {
+    try {
+      const promotionResponse = await api.post("/promotions", {
+        property_id: propertyId,
+        package: packageName,
+      });
+
+      const promotion = promotionResponse.data;
+
+      const phoneNumber = window.prompt(
+        "Enter the M-Pesa number to pay with:\n\n" +
+          "Example: 0712345678\n\n" +
+          "Make sure this is the correct number."
+      );
+
+      if (!phoneNumber) {
+        return;
+      }
+
+      const paymentResponse = await sendPayment(
+        promotion.id,
+        phoneNumber.trim()
+      );
+
+      alert(
+        paymentResponse.message ||
+          "STK Push sent. Check your M-Pesa phone and enter your PIN."
+      );
+
+      await loadPromotions();
+      waitForPayment(promotion.id);
+    } catch (err) {
+      console.error(err);
+
+      if (err.response?.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_id");
+        navigate("/login");
+        return;
+      }
+
+      alert(
+        err.response?.data?.detail ||
+          "Unable to start M-Pesa payment."
+      );
+    }
+  };
+
+  const handleRetryPayment = async (promotion) => {
+    try {
+      setRetryingPromotion(promotion.id);
+
+      const phoneNumber = window.prompt(
+        "Enter the correct M-Pesa number:\n\n" +
+          "Example: 0712345678"
+      );
+
+      if (!phoneNumber) {
+        return;
+      }
+
+      const paymentResponse = await sendPayment(
+        promotion.id,
+        phoneNumber.trim()
+      );
+
+      alert(
+        paymentResponse.message ||
+          "New STK Push sent. Check the selected M-Pesa number."
+      );
+
+      await loadPromotions();
+      waitForPayment(promotion.id);
+    } catch (err) {
+      console.error(err);
+
+      if (err.response?.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_id");
+        navigate("/login");
+        return;
+      }
+
+      alert(
+        err.response?.data?.detail ||
+          "Unable to retry the M-Pesa payment."
+      );
+    } finally {
+      setRetryingPromotion(null);
+    }
+  };
+
   const handleBoostSelection = (propertyId) => {
     const choice = window.prompt(
       "Choose a boost package:\n\n" +
@@ -182,11 +335,23 @@ function Dashboard() {
     };
 
     if (choice && packages[choice]) {
-      handleBoost(
-        propertyId,
-        packages[choice]
-      );
+      handleBoost(propertyId, packages[choice]);
     }
+  };
+
+  const formatPromotionDate = (value) => {
+    if (!value) return "Not available";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Not available";
+    }
+
+    return date.toLocaleString("en-KE", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   };
 
   const isLandlord =
@@ -290,7 +455,102 @@ function Dashboard() {
   }
 
   return (
-    <div className="dashboard-page">
+    <>
+      <style>{`
+        .promotion-list {
+          display: grid;
+          gap: 16px;
+        }
+        .promotion-card {
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          border-radius: 18px;
+          padding: 20px;
+          background: #fff;
+          box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+        }
+        .promotion-card-main {
+          display: flex;
+          justify-content: space-between;
+          gap: 20px;
+        }
+        .promotion-card h3 {
+          margin: 6px 0 10px;
+        }
+        .promotion-card p {
+          margin: 5px 0;
+        }
+        .promotion-card-status {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 7px;
+          min-width: 110px;
+        }
+        .promotion-status {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 7px 12px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 800;
+        }
+        .promotion-status-paid {
+          background: #dcfce7;
+          color: #166534;
+        }
+        .promotion-status-pending {
+          background: #fef3c7;
+          color: #92400e;
+        }
+        .promotion-status-failed {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+        .promotion-details {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 18px;
+          margin-top: 16px;
+          padding-top: 14px;
+          border-top: 1px solid rgba(15, 23, 42, 0.08);
+          font-size: 13px;
+        }
+        .promotion-pending-message,
+        .promotion-error-message {
+          margin-top: 14px;
+          padding: 11px 13px;
+          border-radius: 10px;
+          font-size: 13px;
+        }
+        .promotion-pending-message {
+          background: #fffbeb;
+          color: #92400e;
+        }
+        .promotion-error-message {
+          background: #fef2f2;
+          color: #991b1b;
+        }
+        .promotion-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 15px;
+        }
+        @media (max-width: 640px) {
+          .promotion-card-main {
+            flex-direction: column;
+          }
+          .promotion-card-status {
+            align-items: flex-start;
+          }
+          .promotion-actions button {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      <div className="dashboard-page">
       {/* NAVIGATION */}
       <nav className="navbar">
         <Link to="/" className="logo">
@@ -837,6 +1097,192 @@ function Dashboard() {
           </section>
         )}
 
+        {isLandlord && (
+          <section className="dashboard-section">
+            <div className="dashboard-section-heading">
+              <div>
+                <span className="section-label">
+                  BOOST PAYMENTS
+                </span>
+                <h2>Promotion Payments</h2>
+                <p>
+                  Track your boosts, M-Pesa payments and expiry dates.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="dashboard-section-link"
+                onClick={loadPromotions}
+              >
+                Refresh
+              </button>
+            </div>
+
+            {promotions.length === 0 ? (
+              <div className="dashboard-empty-state dashboard-empty-small">
+                <div className="dashboard-empty-icon">🚀</div>
+                <h2>No boost payments yet</h2>
+                <p>
+                  Boost a property to give it higher visibility.
+                </p>
+              </div>
+            ) : (
+              <div className="promotion-list">
+                {promotions.slice(0, 10).map((promotion) => {
+                  const status = String(
+                    promotion.payment_status || "PENDING"
+                  ).toUpperCase();
+
+                  const property = properties.find(
+                    (item) =>
+                      Number(item.id) ===
+                      Number(promotion.property_id)
+                  );
+
+                  return (
+                    <div
+                      className="promotion-card"
+                      key={promotion.id}
+                    >
+                      <div className="promotion-card-main">
+                        <div>
+                          <span className="section-label">
+                            PROPERTY BOOST
+                          </span>
+
+                          <h3>
+                            {property?.title ||
+                              `Property #${promotion.property_id}`}
+                          </h3>
+
+                          <p>
+                            Package: <strong>{promotion.package}</strong>
+                          </p>
+
+                          <p>
+                            Amount:{" "}
+                            <strong>
+                              KSh{" "}
+                              {Number(
+                                promotion.amount || 0
+                              ).toLocaleString()}
+                            </strong>
+                          </p>
+
+                          {promotion.phone_number && (
+                            <p>
+                              M-Pesa:{" "}
+                              <strong>
+                                {promotion.phone_number}
+                              </strong>
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="promotion-card-status">
+                          <span
+                            className={`promotion-status ${
+                              status === "PAID"
+                                ? "promotion-status-paid"
+                                : status === "FAILED"
+                                  ? "promotion-status-failed"
+                                  : "promotion-status-pending"
+                            }`}
+                          >
+                            {status === "PAID"
+                              ? "✓ PAID"
+                              : status === "FAILED"
+                                ? "✕ FAILED"
+                                : "● PENDING"}
+                          </span>
+
+                          {status === "PAID" &&
+                            promotion.payment_reference && (
+                              <small>
+                                Receipt:{" "}
+                                {promotion.payment_reference}
+                              </small>
+                            )}
+                        </div>
+                      </div>
+
+                      {status === "PAID" && (
+                        <div className="promotion-details">
+                          <span>
+                            Started:{" "}
+                            {formatPromotionDate(
+                              promotion.starts_at
+                            )}
+                          </span>
+
+                          <span>
+                            Expires:{" "}
+                            {formatPromotionDate(
+                              promotion.expires_at
+                            )}
+                          </span>
+                        </div>
+                      )}
+
+                      {status === "FAILED" && (
+                        <div className="promotion-error-message">
+                          {promotion.result_description ||
+                            "Payment failed. Try again with the correct M-Pesa number."}
+                        </div>
+                      )}
+
+                      {status === "PENDING" && (
+                        <div className="promotion-pending-message">
+                          Waiting for M-Pesa confirmation. Check the
+                          correct phone for the STK prompt.
+                        </div>
+                      )}
+
+                      <div className="promotion-actions">
+                        {(status === "PENDING" ||
+                          status === "FAILED") && (
+                          <button
+                            type="button"
+                            className="property-boost-action"
+                            disabled={
+                              retryingPromotion === promotion.id
+                            }
+                            onClick={() =>
+                              handleRetryPayment(promotion)
+                            }
+                          >
+                            {retryingPromotion === promotion.id
+                              ? "Sending..."
+                              : "Change Number / Retry"}
+                          </button>
+                        )}
+
+                        {status === "PENDING" && (
+                          <button
+                            type="button"
+                            className="property-view-action"
+                            disabled={
+                              paymentChecking[promotion.id]
+                            }
+                            onClick={() =>
+                              handlePaymentStatus(promotion.id)
+                            }
+                          >
+                            {paymentChecking[promotion.id]
+                              ? "Checking..."
+                              : "Check Payment"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* CONVERSATIONS */}
         <section className="dashboard-section">
           <div className="dashboard-section-heading">
@@ -984,7 +1430,8 @@ function Dashboard() {
           </Link>
         </section>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 
