@@ -117,6 +117,7 @@ if (selectedFiles.length > 0) {
 
 navigate("/dashboard");
 
+
     } catch (err) {
       console.error(err);
 
@@ -129,11 +130,10 @@ navigate("/dashboard");
       } else {
         setError("Unable to create property.");
       }
-    {loading
-  ? uploading
-    ? "Uploading photos..."
-    : "Creating..."
-  : "Create Property"}
+    } finally {
+      setLoading(false);
+      setUploading(false);
+    }
   };
 
   return (
@@ -468,7 +468,7 @@ navigate("/dashboard");
     </div>
   );
 }
-}
 
 export default AddProperty;
+
 
