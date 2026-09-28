@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -153,7 +153,7 @@ navigate("/dashboard");
       <main className="add-property-container">
 
         <div className="form-header">
-          <p className="eyebrow">🏠 NYUMBADIRECT</p>
+          <p className="eyebrow">ðŸ  NYUMBADIRECT</p>
 
           <h1>Add a Property</h1>
 
@@ -401,7 +401,7 @@ navigate("/dashboard");
       htmlFor="property-photo-input"
       className="photo-file-label"
     >
-      📷 Choose Photos
+      ðŸ“· Choose Photos
     </label>
 
     <input
@@ -413,7 +413,7 @@ navigate("/dashboard");
     />
 
     <p>
-      JPG, PNG or WEBP · Maximum 5 MB per image
+      JPG, PNG or WEBP Â· Maximum 5 MB per image
     </p>
 
     {selectedFiles.length > 0 && (
@@ -468,5 +468,7 @@ navigate("/dashboard");
     </div>
   );
 }
+}
 
 export default AddProperty;
+

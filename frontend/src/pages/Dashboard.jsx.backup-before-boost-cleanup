@@ -15,8 +15,6 @@ function Dashboard() {
   const [promotions, setPromotions] = useState([]);
   const [paymentChecking, setPaymentChecking] = useState({});
   const [retryingPromotion, setRetryingPromotion] = useState(null);
-  const [verification, setVerification] = useState(null);
-  const [verificationLoading, setVerificationLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -39,27 +37,11 @@ function Dashboard() {
         setUser(currentUser);
 
         const normalizedRole =
-           currentUser?.role?.toUpperCase();
+          currentUser?.role?.toUpperCase();
 
         const isLandlord =
-            normalizedRole === "LANDLORD" ||
-            normalizedRole === "PROPERTY_MANAGER";
-
-       if (isLandlord) {
-         try {
-             const verificationResponse =
-               await api.get("/verification/status");
-
-             setVerification(
-                 verificationResponse.data
-             );
-         } catch (verificationError) {
-           console.error(
-              "Unable to load verification status:",
-              verificationError
-           );
-        }
-      }
+          normalizedRole === "LANDLORD" ||
+          normalizedRole === "PROPERTY_MANAGER";
 
         const requests = [
           api.get("/messages/conversations"),
@@ -1083,15 +1065,15 @@ function Dashboard() {
                           </Link>
 
                           <button
-                             type="button"
-                             className="property-boost-action"
-                             onClick={() =>
-                               navigate(
-                                 `/boost-property/${property.id}`
-                               )
-                             }
+                            type="button"
+                            className="property-boost-action"
+                            onClick={() =>
+                              handleBoostSelection(
+                                property.id
+                              )
+                            }
                           >
-                             🚀 Boost
+                            🚀 Boost
                           </button>
 
                           <button
@@ -1115,6 +1097,191 @@ function Dashboard() {
           </section>
         )}
 
+        {isLandlord && (
+          <section className="dashboard-section">
+            <div className="dashboard-section-heading">
+              <div>
+                <span className="section-label">
+                  BOOST PAYMENTS
+                </span>
+                <h2>Promotion Payments</h2>
+                <p>
+                  Track your boosts, M-Pesa payments and expiry dates.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="dashboard-section-link"
+                onClick={loadPromotions}
+              >
+                Refresh
+              </button>
+            </div>
+
+            {promotions.length === 0 ? (
+              <div className="dashboard-empty-state dashboard-empty-small">
+                <div className="dashboard-empty-icon">🚀</div>
+                <h2>No boost payments yet</h2>
+                <p>
+                  Boost a property to give it higher visibility.
+                </p>
+              </div>
+            ) : (
+              <div className="promotion-list">
+                {promotions.slice(0, 10).map((promotion) => {
+                  const status = String(
+                    promotion.payment_status || "PENDING"
+                  ).toUpperCase();
+
+                  const property = properties.find(
+                    (item) =>
+                      Number(item.id) ===
+                      Number(promotion.property_id)
+                  );
+
+                  return (
+                    <div
+                      className="promotion-card"
+                      key={promotion.id}
+                    >
+                      <div className="promotion-card-main">
+                        <div>
+                          <span className="section-label">
+                            PROPERTY BOOST
+                          </span>
+
+                          <h3>
+                            {property?.title ||
+                              `Property #${promotion.property_id}`}
+                          </h3>
+
+                          <p>
+                            Package: <strong>{promotion.package}</strong>
+                          </p>
+
+                          <p>
+                            Amount:{" "}
+                            <strong>
+                              KSh{" "}
+                              {Number(
+                                promotion.amount || 0
+                              ).toLocaleString()}
+                            </strong>
+                          </p>
+
+                          {promotion.phone_number && (
+                            <p>
+                              M-Pesa:{" "}
+                              <strong>
+                                {promotion.phone_number}
+                              </strong>
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="promotion-card-status">
+                          <span
+                            className={`promotion-status ${
+                              status === "PAID"
+                                ? "promotion-status-paid"
+                                : status === "FAILED"
+                                  ? "promotion-status-failed"
+                                  : "promotion-status-pending"
+                            }`}
+                          >
+                            {status === "PAID"
+                              ? "✓ PAID"
+                              : status === "FAILED"
+                                ? "✕ FAILED"
+                                : "● PENDING"}
+                          </span>
+
+                          {status === "PAID" &&
+                            promotion.payment_reference && (
+                              <small>
+                                Receipt:{" "}
+                                {promotion.payment_reference}
+                              </small>
+                            )}
+                        </div>
+                      </div>
+
+                      {status === "PAID" && (
+                        <div className="promotion-details">
+                          <span>
+                            Started:{" "}
+                            {formatPromotionDate(
+                              promotion.starts_at
+                            )}
+                          </span>
+
+                          <span>
+                            Expires:{" "}
+                            {formatPromotionDate(
+                              promotion.expires_at
+                            )}
+                          </span>
+                        </div>
+                      )}
+
+                      {status === "FAILED" && (
+                        <div className="promotion-error-message">
+                          {promotion.result_description ||
+                            "Payment failed. Try again with the correct M-Pesa number."}
+                        </div>
+                      )}
+
+                      {status === "PENDING" && (
+                        <div className="promotion-pending-message">
+                          Waiting for M-Pesa confirmation. Check the
+                          correct phone for the STK prompt.
+                        </div>
+                      )}
+
+                      <div className="promotion-actions">
+                        {(status === "PENDING" ||
+                          status === "FAILED") && (
+                          <button
+                            type="button"
+                            className="property-boost-action"
+                            disabled={
+                              retryingPromotion === promotion.id
+                            }
+                            onClick={() =>
+                              handleRetryPayment(promotion)
+                            }
+                          >
+                            {retryingPromotion === promotion.id
+                              ? "Sending..."
+                              : "Change Number / Retry"}
+                          </button>
+                        )}
+
+                        {status === "PENDING" && (
+                          <button
+                            type="button"
+                            className="property-view-action"
+                            disabled={
+                              paymentChecking[promotion.id]
+                            }
+                            onClick={() =>
+                              handlePaymentStatus(promotion.id)
+                            }
+                          >
+                            {paymentChecking[promotion.id]
+                              ? "Checking..."
+                              : "Check Payment"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* CONVERSATIONS */}
         <section className="dashboard-section">
@@ -1218,161 +1385,6 @@ function Dashboard() {
             </div>
           )}
         </section>
-
-        {isLandlord && (
-  <section className="dashboard-verification-card">
-    <div className="dashboard-verification-header">
-      <div>
-        <span className="section-label">
-          ACCOUNT VERIFICATION
-        </span>
-
-        <h2>
-          {verification?.is_verified
-            ? "Verified Account"
-            : "Verify Your Account"}
-        </h2>
-      </div>
-
-      <div
-        className={`verification-status-icon ${
-          verification?.is_verified
-            ? "verified"
-            : verification?.verification_status ===
-              "PENDING"
-            ? "pending"
-            : "unverified"
-        }`}
-      >
-        {verification?.is_verified
-          ? "✓"
-          : verification?.verification_status ===
-            "PENDING"
-          ? "⏳"
-          : "!"}
-      </div>
-    </div>
-
-    {verification?.is_verified ? (
-      <div className="verification-success">
-        <strong>
-          ✓ Verified Landlord / Property Manager
-        </strong>
-
-        <p>
-          Your account has been verified by
-          NyumbaDirect. Your verified status can
-          appear alongside your listings.
-        </p>
-      </div>
-    ) : verification?.verification_status ===
-      "PENDING" ? (
-      <div className="verification-pending">
-        <strong>
-          Verification under review
-        </strong>
-
-        <p>
-          Your verification request has been
-          submitted and is waiting for review.
-        </p>
-      </div>
-    ) : verification?.verification_status ===
-      "REJECTED" ? (
-      <div className="verification-rejected">
-        <strong>
-          Verification needs attention
-        </strong>
-
-        <p>
-          Your previous verification request was
-          not approved. Please review your
-          information and submit again.
-        </p>
-
-        <button
-          type="button"
-          className="dashboard-primary-action"
-          disabled={verificationLoading}
-          onClick={async () => {
-            try {
-              setVerificationLoading(true);
-
-              const response = await api.post(
-                "/verification/submit",
-                {
-                  notes:
-                    "I would like to resubmit my account for verification.",
-                }
-              );
-
-              setVerification(
-                response.data
-              );
-            } catch (err) {
-              alert(
-                err.response?.data?.detail ||
-                  "Unable to submit verification."
-              );
-            } finally {
-              setVerificationLoading(false);
-            }
-          }}
-        >
-          {verificationLoading
-            ? "Submitting..."
-            : "Resubmit Verification"}
-        </button>
-      </div>
-    ) : (
-      <div className="verification-unsubmitted">
-        <strong>
-          Build trust with house hunters
-        </strong>
-
-        <p>
-          Verify your landlord or property manager
-          account so users can see that your
-          account has been reviewed by NyumbaDirect.
-        </p>
-
-        <button
-          type="button"
-          className="dashboard-primary-action"
-          disabled={verificationLoading}
-          onClick={async () => {
-            try {
-              setVerificationLoading(true);
-
-              const response = await api.post(
-                "/verification/submit",
-                {
-                  notes:
-                    "I am the landlord/property manager of the properties listed on my account.",
-                }
-              );
-
-              setVerification(
-                response.data
-              );
-            } catch (err) {
-              alert(
-                err.response?.data?.detail ||
-                  "Unable to submit verification."
-              );
-            } finally {
-              setVerificationLoading(false);
-            }
-          }}
-        >
-          {verificationLoading
-            ? "Submitting..."
-            : "Submit for Verification"}
-        </button>
-      </div>
-    )}
-  </section>
-)}
 
         {/* ACCOUNT OVERVIEW */}
         <section className="dashboard-account-card">

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -75,4 +75,33 @@ class User(Base):
     properties: Mapped[list["Property"]] = relationship(
         back_populates="owner",
         cascade="all, delete-orphan",
+    )
+
+    is_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        index=True,
+    )
+
+    verification_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="NOT_SUBMITTED",
+        index=True,
+    )
+
+    verification_submitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    verification_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    verification_notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )

@@ -20,6 +20,7 @@ import Messages from "./pages/Messages";
 import SavedHomes from "./pages/SavedHomes";
 import BoostProperty from "./pages/BoostProperty";
 import Navigation from "./components/Navigation";
+import AdminVerification from "./pages/AdminVerification";
 
 
 /* =========================================================
@@ -1630,7 +1631,13 @@ function App() {
            element={<BoostProperty />}
         />
 
+        <Route
+            path="/admin/verification"
+            element={<AdminVerification />}
+        />
+
       </Routes>
+
 
 
 
