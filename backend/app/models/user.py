@@ -57,6 +57,7 @@ class User(Base):
         Boolean,
         nullable=False,
         default=False,
+        index=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -75,13 +76,6 @@ class User(Base):
     properties: Mapped[list["Property"]] = relationship(
         back_populates="owner",
         cascade="all, delete-orphan",
-    )
-
-    is_verified: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
-        index=True,
     )
 
     verification_status: Mapped[str] = mapped_column(

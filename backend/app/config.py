@@ -16,6 +16,14 @@ class Settings(BaseSettings):
     database_pool_size: int = 5
     database_max_overflow: int = 10
     database_pool_timeout: int = 30
+    verification_code_ttl_minutes: int = 10
+    verification_code_max_attempts: int = 5
+    verification_resend_cooldown_seconds: int = 60
+    sms_provider: str = ""
+    sms_api_key: str = ""
+    sms_username: str = "sandbox"
+    sms_sender_id: str = ""
+    sms_environment: str = "sandbox"
 
     model_config = SettingsConfigDict(
         env_file=".env",

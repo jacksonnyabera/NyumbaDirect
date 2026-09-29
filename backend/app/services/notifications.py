@@ -1,6 +1,7 @@
 import os
 import logging
 import smtplib
+import requests
 from email.message import EmailMessage
 
 
@@ -37,6 +38,51 @@ class NotificationService:
         # bearer tokens and application logs are not a mail delivery channel.
         logging.warning("Email delivery is not configured; notification was not sent")
         return False
+
+    @staticmethod
+    def send_verification_code_email(to_email: str, name: str, code: str) -> bool:
+        return NotificationService.send_email(
+            to_email,
+            "Your NyumbaDirect verification code",
+            f"Hi {name},\n\nYour NyumbaDirect verification code is {code}. "
+            "It expires in 10 minutes. If you did not create this account, ignore this message.\n\nNyumbaDirect Kenya",
+        )
+
+    @staticmethod
+    def send_verification_code_sms(phone_number: str, code: str) -> bool:
+        from app.config import settings
+
+        if settings.sms_provider.lower() != "africas_talking" or not settings.sms_api_key:
+            logging.warning("SMS delivery is not configured; verification message was not sent")
+            return False
+        host = (
+            "https://api.sandbox.africastalking.com"
+            if settings.sms_environment.lower() == "sandbox"
+            else "https://api.africastalking.com"
+        )
+        payload = {
+            "username": settings.sms_username,
+            "to": phone_number,
+            "message": f"Your NyumbaDirect verification code is {code}. It expires in 10 minutes.",
+        }
+        if settings.sms_sender_id:
+            payload["from"] = settings.sms_sender_id
+        try:
+            response = requests.post(
+                f"{host}/version1/messaging",
+                headers={"apiKey": settings.sms_api_key, "Accept": "application/json"},
+                data=payload,
+                timeout=(3, 10),
+            )
+            response.raise_for_status()
+            recipients = response.json().get("SMSMessageData", {}).get("Recipients", [])
+            return bool(recipients) and all(
+                str(item.get("status", "")).lower() in {"success", "sent", "queued"}
+                for item in recipients
+            )
+        except (requests.RequestException, ValueError, AttributeError) as exc:
+            logging.warning("SMS verification delivery failed (%s)", type(exc).__name__)
+            return False
 
     @staticmethod
     def send_verification_email(to_email: str, name: str, token: str) -> bool:

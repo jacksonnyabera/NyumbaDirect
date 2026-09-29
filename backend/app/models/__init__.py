@@ -7,6 +7,7 @@ from app.models.favorite import Favorite
 from app.models.review import Review
 from app.models.landlord_verification import LandlordVerification
 from app.models.property_promotion import PropertyPromotion
+from app.models.account_verification import AccountVerification
 
 __all__ = [
     "User",
@@ -16,6 +17,7 @@ __all__ = [
     "Message",
     "Favorite",
     "Review",
-    "LandlordVerification"
+    "LandlordVerification",
     "PropertyPromotion",
+    "AccountVerification",
 ]

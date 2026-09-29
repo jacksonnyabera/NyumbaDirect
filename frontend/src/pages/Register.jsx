@@ -8,10 +8,10 @@ function Register() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("HOUSE_HUNTER");
+  const [verificationMethod, setVerificationMethod] = useState("EMAIL");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -49,7 +49,6 @@ function Register() {
     }
 
     setError("");
-    setSuccess("");
     setLoading(true);
 
     try {
@@ -59,17 +58,12 @@ function Register() {
         phone_number: cleanPhone,
         password,
         role,
-      });
-
-      setSuccess(
-        response.data?.verification_email_sent
-          ? "Account created. Check your inbox for a verification link, then sign in. Redirecting to login..."
-          : "Account created, but we couldn't send a verification email right now. You can still sign in; contact support if you need help. Redirecting to login..."
-      );
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 1400);
+      }, { params: { verification_method: verificationMethod } });
+      navigate("/verify-account", { state: {
+        email: cleanEmail,
+        method: verificationMethod,
+        deliveryPending: !response.data?.verification_sent,
+      } });
     } catch (err) {
       console.error(err);
 
@@ -107,12 +101,6 @@ function Register() {
           </div>
         )}
 
-        {success && (
-          <div className="success-message">
-            {success}
-          </div>
-        )}
-
         <form className="auth-form" onSubmit={handleRegister}>
           <div className="form-grid">
             <div className="auth-field">
@@ -136,6 +124,21 @@ function Register() {
                 <option value="PROPERTY_MANAGER">Property Manager</option>
               </select>
             </div>
+          </div>
+
+          <div className="auth-field">
+            <label>Send my verification code by</label>
+            <div className="auth-options">
+              <label className="check-row">
+                <input type="radio" name="verificationMethod" value="EMAIL" checked={verificationMethod === "EMAIL"} onChange={() => setVerificationMethod("EMAIL")} />
+                <span>Email</span>
+              </label>
+              <label className="check-row">
+                <input type="radio" name="verificationMethod" value="SMS" checked={verificationMethod === "SMS"} onChange={() => setVerificationMethod("SMS")} />
+                <span>SMS to my phone</span>
+              </label>
+            </div>
+            <small className="auth-hint">Kenyan mobile numbers only for SMS verification.</small>
           </div>
 
           <div className="form-grid">

@@ -10,6 +10,7 @@ import {
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyAccount from "./pages/VerifyAccount";
 import Properties from "./pages/Properties";
 import PropertyDetails from "./pages/PropertyDetails";
 import Dashboard from "./pages/Dashboard";
@@ -817,6 +818,13 @@ function getRouteMeta(pathname) {
       index: false,
     },
 
+    "/verify-account": {
+      title: "Verify Your Account | NyumbaDirect Kenya",
+      description: "Verify your NyumbaDirect account with a one-time email or SMS code.",
+      keywords: "",
+      index: false,
+    },
+
     "/forgot-password": {
       title: "Reset Password | NyumbaDirect Kenya",
       description: "Request a secure password reset link for your NyumbaDirect account.",
@@ -1440,6 +1448,7 @@ function App() {
           path="/register"
           element={<Register />}
         />
+        <Route path="/verify-account" element={<VerifyAccount />} />
 
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />

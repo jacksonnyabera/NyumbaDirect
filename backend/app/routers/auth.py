@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
@@ -6,6 +8,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.models.account_verification import AccountVerification
+from app.config import settings
 from app.schemas.user import (
     TokenResponse,
     UserCreate,
@@ -14,7 +18,6 @@ from app.schemas.user import (
 )
 from app.security import (
     create_access_token,
-    create_email_verification_token,
     create_password_reset_token,
     decode_email_verification_token,
     decode_password_reset_token,
@@ -22,6 +25,9 @@ from app.security import (
     verify_password,
 )
 from app.services.notifications import NotificationService
+from app.services.account_verification import (
+    check_code, generate_code, hash_code, normalize_kenyan_phone,
+)
 
 
 router = APIRouter(
@@ -40,7 +46,42 @@ class PasswordResetConfirm(BaseModel):
 
 
 class RegistrationResponse(UserResponse):
-    verification_email_sent: bool
+    verification_method: str
+    verification_sent: bool
+
+
+class VerificationRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+    method: str = Field(pattern=r"^(EMAIL|SMS)$")
+
+
+def _deliver_verification(user: User, method: str, code: str) -> bool:
+    if method == "SMS":
+        return NotificationService.send_verification_code_sms(user.phone_number, code)
+    return NotificationService.send_verification_code_email(user.email, user.full_name, code)
+
+
+def _new_challenge(user: User, method: str, db: Session) -> tuple[AccountVerification, str]:
+    code = generate_code()
+    now = datetime.now(timezone.utc)
+    challenge = db.scalar(
+        select(AccountVerification).where(AccountVerification.user_id == user.id)
+    )
+    if challenge is None:
+        challenge = AccountVerification(user_id=user.id)
+        db.add(challenge)
+    challenge.method = method
+    challenge.code_hash = hash_code(code)
+    challenge.expires_at = now + timedelta(minutes=settings.verification_code_ttl_minutes)
+    challenge.attempts = 0
+    challenge.last_sent_at = now
+    challenge.consumed_at = None
+    return challenge, code
 
 
 ALLOWED_REGISTRATION_ROLES = {
@@ -57,10 +98,14 @@ ALLOWED_REGISTRATION_ROLES = {
 )
 def register_user(
     user_data: UserCreate,
+    verification_method: str = Query("EMAIL", pattern="^(EMAIL|SMS)$"),
     db: Session = Depends(get_db),
 ):
     email = user_data.email.strip().lower()
-    phone_number = user_data.phone_number.strip()
+    try:
+        phone_number = normalize_kenyan_phone(user_data.phone_number)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     full_name = user_data.full_name.strip()
     role = user_data.role.strip().upper()
 
@@ -126,16 +171,59 @@ def register_user(
     db.commit()
     db.refresh(user)
 
-    verification_token = create_email_verification_token(user.email)
-    verification_email_sent = NotificationService.send_verification_email(
-        to_email=user.email,
-        name=user.full_name,
-        token=verification_token,
-    )
+    _, code = _new_challenge(user, verification_method, db)
+    db.commit()
+    verification_sent = _deliver_verification(user, verification_method, code)
 
     response = UserResponse.model_validate(user).model_dump()
-    response["verification_email_sent"] = verification_email_sent
+    response["verification_method"] = verification_method
+    response["verification_sent"] = verification_sent
     return response
+
+
+@router.post("/verify-signup")
+def verify_signup(data: VerificationRequest, db: Session = Depends(get_db)):
+    email = str(data.email).strip().lower()
+    user = db.scalar(select(User).where(User.email == email))
+    challenge = db.scalar(
+        select(AccountVerification).where(AccountVerification.user_id == user.id)
+    ) if user else None
+    invalid = HTTPException(status_code=400, detail="The code is invalid or expired. Request a new code and try again.")
+    if not user or not challenge or challenge.consumed_at or user.is_verified:
+        raise invalid
+    now = datetime.now(timezone.utc)
+    expires_at = challenge.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= now or challenge.attempts >= settings.verification_code_max_attempts:
+        raise invalid
+    if not check_code(data.code, challenge.code_hash):
+        challenge.attempts += 1
+        db.commit()
+        raise invalid
+    challenge.consumed_at = now
+    user.is_verified = True
+    db.commit()
+    return {"status": "verified", "message": "Your account is verified. You can now sign in."}
+
+
+@router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED)
+def resend_verification(data: ResendVerificationRequest, db: Session = Depends(get_db)):
+    email = str(data.email).strip().lower()
+    user = db.scalar(select(User).where(User.email == email))
+    if user and not user.is_verified and user.is_active:
+        existing = db.scalar(
+            select(AccountVerification).where(AccountVerification.user_id == user.id)
+        )
+        now = datetime.now(timezone.utc)
+        last_sent = existing.last_sent_at if existing else None
+        if last_sent and last_sent.tzinfo is None:
+            last_sent = last_sent.replace(tzinfo=timezone.utc)
+        if not last_sent or (now - last_sent).total_seconds() >= settings.verification_resend_cooldown_seconds:
+            _, code = _new_challenge(user, data.method, db)
+            db.commit()
+            _deliver_verification(user, data.method, code)
+    return {"message": "If this account is awaiting verification, a code has been sent when the requested channel is available."}
 
 
 @router.get(
@@ -170,7 +258,6 @@ def verify_email(
         )
 
     user.is_verified = True
-    user.is_active = True
     db.commit()
 
     return {
@@ -262,6 +349,12 @@ def login_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Your account is inactive.",
+        )
+
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ACCOUNT_NOT_VERIFIED",
         )
 
     access_token = create_access_token(
