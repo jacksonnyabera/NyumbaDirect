@@ -4,6 +4,8 @@ import api from "../services/api";
 
 function Messages() {
   const { conversationId } = useParams();
+  const activeConversationId = useRef(conversationId);
+  activeConversationId.current = conversationId;
 
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -16,6 +18,10 @@ function Messages() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const latestMessageId = useRef(0);
+  const messagesListRef = useRef(null);
+  const shouldScrollToBottom = useRef(false);
+  const isNearBottom = useRef(true);
+  const heightBeforePrepend = useRef(null);
 
   const currentUserId = Number(localStorage.getItem("user_id"));
 
@@ -26,7 +32,7 @@ function Messages() {
     );
   }, [conversation, currentUserId]);
 
-  const loadMessages = async (showLoading = true) => {
+  const loadMessages = async (showLoading = true, isCurrent = () => true) => {
     try {
       if (showLoading) {
         setLoading(true);
@@ -43,10 +49,15 @@ function Messages() {
         }
       );
 
+      if (!isCurrent()) return false;
+
       const data = response.data || {};
 
       setConversation(data.conversation || null);
       const incoming = data.messages || [];
+      if (showLoading || (incoming.length > 0 && isNearBottom.current)) {
+        shouldScrollToBottom.current = true;
+      }
       if (incoming.length) {
         latestMessageId.current = Math.max(
           latestMessageId.current,
@@ -65,7 +76,9 @@ function Messages() {
       setContact(data.contact || null);
       setAiAvailable(Boolean(data.ai_available));
       if (showLoading) setHasMore(Boolean(data.has_more));
+      return true;
     } catch (err) {
+      if (!isCurrent()) return false;
       console.error(err);
 
       if (err.response?.status === 401) {
@@ -73,33 +86,57 @@ function Messages() {
         localStorage.removeItem("user_id");
         localStorage.removeItem("user");
         window.location.href = "/login";
-        return;
+        return false;
       }
 
       setError(
         err.response?.data?.detail ||
           "Failed to load messages."
       );
+      return false;
     } finally {
-      if (showLoading) {
+      if (showLoading && isCurrent()) {
         setLoading(false);
       }
     }
   };
 
+  useEffect(() => {
+    const list = messagesListRef.current;
+    if (!list) return;
+
+    if (heightBeforePrepend.current !== null) {
+      list.scrollTop += list.scrollHeight - heightBeforePrepend.current;
+      heightBeforePrepend.current = null;
+      isNearBottom.current =
+        list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+      return;
+    }
+
+    if (shouldScrollToBottom.current) {
+      list.scrollTop = list.scrollHeight;
+      shouldScrollToBottom.current = false;
+      isNearBottom.current = true;
+    }
+  }, [messages]);
+
   const loadOlderMessages = async () => {
     const beforeId = Number(messages[0]?.id);
     if (!beforeId || loadingOlder) return;
+    const requestedConversationId = conversationId;
     try {
       setLoadingOlder(true);
       const response = await api.get(
-        `/messages/conversations/${conversationId}/messages`,
+        `/messages/conversations/${requestedConversationId}/messages`,
         { params: { before_id: beforeId, limit: 50 } }
       );
+      if (activeConversationId.current !== requestedConversationId) return;
       const older = response.data?.messages || [];
+      heightBeforePrepend.current = messagesListRef.current?.scrollHeight ?? null;
       setMessages((current) => [...older, ...current]);
       setHasMore(Boolean(response.data?.has_more));
     } catch (requestError) {
+      if (activeConversationId.current !== requestedConversationId) return;
       setError(requestError.response?.data?.detail || "Unable to load older messages.");
     } finally {
       setLoadingOlder(false);
@@ -126,13 +163,23 @@ function Messages() {
       if (!active || polling) return;
       polling = true;
       try {
-        await loadMessages(initial);
-        if (active) await markMessagesAsRead();
+        const isCurrent = () =>
+          active && activeConversationId.current === conversationId;
+        const loaded = await loadMessages(initial, isCurrent);
+        if (isCurrent() && loaded) await markMessagesAsRead();
       } finally {
         polling = false;
       }
     };
 
+    latestMessageId.current = 0;
+    shouldScrollToBottom.current = true;
+    heightBeforePrepend.current = null;
+    isNearBottom.current = true;
+    setMessages([]);
+    setConversation(null);
+    setContact(null);
+    setAiAvailable(false);
     refresh(true);
     const interval = setInterval(() => refresh(false), 5000);
 
@@ -152,21 +199,25 @@ function Messages() {
       return;
     }
 
+    const requestedConversationId = conversationId;
     try {
       setSending(true);
       setError("");
 
       const response = await api.post(
-        `/messages/conversations/${conversationId}/messages`,
+        `/messages/conversations/${requestedConversationId}/messages`,
         {
           content: trimmedContent,
         }
       );
 
+      if (activeConversationId.current !== requestedConversationId) return;
+
       const sentMessage = response.data?.message;
       const aiReply = response.data?.ai_reply;
 
       if (sentMessage) {
+        shouldScrollToBottom.current = true;
         latestMessageId.current = Math.max(
           latestMessageId.current,
           Number(aiReply?.id) || 0,
@@ -196,6 +247,7 @@ function Messages() {
 
       setContent("");
     } catch (err) {
+      if (activeConversationId.current !== requestedConversationId) return;
       console.error(err);
 
       if (err.response?.status === 401) {
@@ -345,7 +397,15 @@ function Messages() {
         )}
 
         <div className="messages-card">
-          <div className="messages-list">
+          <div
+            className="messages-list"
+            ref={messagesListRef}
+            onScroll={(event) => {
+              const list = event.currentTarget;
+              isNearBottom.current =
+                list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+            }}
+          >
             {!loading && hasMore && (
               <button
                 type="button"
@@ -426,8 +486,10 @@ function Messages() {
                       <small>
                         {formatMessageTime(message.created_at)}
 
-                        {isMine && !isAi && message.is_read && (
-                          <span className="read-status"> • Read</span>
+                        {isMine && !isAi && (
+                          <span className="read-status">
+                            {message.is_read ? " · Read" : " · Sent"}
+                          </span>
                         )}
                       </small>
                     </div>

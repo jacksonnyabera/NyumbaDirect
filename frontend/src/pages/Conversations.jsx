@@ -13,7 +13,13 @@ function Conversations() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadConversations = async () => {
+    let active = true;
+    let inFlight = false;
+    let hasLoaded = false;
+
+    const loadConversations = async (initial = false) => {
+      if (!active || inFlight) return;
+
       const token = localStorage.getItem("access_token");
 
       if (!token) {
@@ -21,20 +27,44 @@ function Conversations() {
         return;
       }
 
+      inFlight = true;
+      const firstLoad = !hasLoaded;
       try {
-        setLoading(true);
-        setError("");
+        if (initial) setLoading(true);
+        const conversationsRequest = api.get("/messages/conversations", {
+          params: { skip: 0, limit: 50 },
+        });
 
-        const [userResponse, conversationsResponse] =
-          await Promise.all([
+        let conversationsResponse;
+        if (firstLoad) {
+          const [userResponse, response] = await Promise.all([
             api.get("/auth/me"),
-            api.get("/messages/conversations", { params: { skip: 0, limit: 50 } }),
+            conversationsRequest,
           ]);
+          if (!active) return;
+          setUser(userResponse.data);
+          conversationsResponse = response;
+        } else {
+          conversationsResponse = await conversationsRequest;
+          if (!active) return;
+        }
 
-        setUser(userResponse.data);
-        setConversations(conversationsResponse.data?.items || []);
+        const incoming = conversationsResponse.data?.items || [];
+        setConversations((current) => {
+          if (firstLoad || current.length === 0) return incoming;
+          const merged = new Map(current.map((item) => [item.id, item]));
+          incoming.forEach((item) => merged.set(item.id, item));
+          return [...merged.values()].sort(
+            (left, right) =>
+              new Date(right.updated_at || right.created_at) -
+              new Date(left.updated_at || left.created_at)
+          );
+        });
         setTotal(conversationsResponse.data?.total || 0);
+        setError("");
+        hasLoaded = true;
       } catch (err) {
+        if (!active) return;
         console.error("Failed to load conversations:", err);
 
         if (err.response?.status === 401) {
@@ -50,11 +80,18 @@ function Conversations() {
             "Unable to load your conversations."
         );
       } finally {
-        setLoading(false);
+        inFlight = false;
+        if (initial && active) setLoading(false);
       }
     };
 
-    loadConversations();
+    loadConversations(true);
+    const interval = window.setInterval(() => loadConversations(false), 15000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [navigate]);
 
   const loadMoreConversations = async () => {
@@ -63,7 +100,10 @@ function Conversations() {
       const response = await api.get("/messages/conversations", {
         params: { skip: conversations.length, limit: 50 },
       });
-      setConversations((current) => [...current, ...(response.data?.items || [])]);
+      setConversations((current) => {
+        const knownIds = new Set(current.map((item) => item.id));
+        return [...current, ...(response.data?.items || []).filter((item) => !knownIds.has(item.id))];
+      });
       setTotal(response.data?.total || total);
     } catch (err) {
       setError(err.response?.data?.detail || "Unable to load more conversations.");
