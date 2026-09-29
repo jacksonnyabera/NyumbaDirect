@@ -27,6 +27,8 @@ function AddProperty() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [createdPropertyId, setCreatedPropertyId] = useState(null);
+  const [hasPrimaryPhoto, setHasPrimaryPhoto] = useState(false);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -68,6 +70,7 @@ function AddProperty() {
 
     setError("");
     setLoading(true);
+    let propertyId = createdPropertyId;
 
     try {
       const payload = {
@@ -84,44 +87,68 @@ function AddProperty() {
         longitude: formData.longitude
           ? Number(formData.longitude)
           : null,
+        // Keep the listing out of public search until all requested photos
+        // have uploaded and the submission can be completed.
+        is_available: false,
       };
 
-      const propertyResponse = await api.post(
-  "/properties",
-  payload
-);
+      if (!propertyId) {
+        const propertyResponse = await api.post("/properties", payload);
+        propertyId = propertyResponse.data.id;
+        setCreatedPropertyId(propertyId);
+      }
 
-const propertyId = propertyResponse.data.id;
+      if (selectedFiles.length > 0) {
+        setUploading(true);
+        let primaryAssigned = hasPrimaryPhoto;
 
-if (selectedFiles.length > 0) {
-  setUploading(true);
+        for (let index = 0; index < selectedFiles.length; index++) {
+          const file = selectedFiles[index];
 
-  for (let index = 0; index < selectedFiles.length; index++) {
-    const file = selectedFiles[index];
+          const photoFormData = new FormData();
+          photoFormData.append("file", file);
+          photoFormData.append("is_primary", !primaryAssigned ? "true" : "false");
 
-    const photoFormData = new FormData();
+          try {
+            await api.post(`/properties/${propertyId}/photos`, photoFormData);
+          } catch (photoUploadError) {
+            // Retry only the photo that failed and those after it. Previously
+            // uploaded photos stay on the same saved listing.
+            setSelectedFiles(selectedFiles.slice(index));
+            throw photoUploadError;
+          }
 
-    photoFormData.append("file", file);
+          if (!primaryAssigned) {
+            primaryAssigned = true;
+            setHasPrimaryPhoto(true);
+          }
+          setSelectedFiles(selectedFiles.slice(index + 1));
+        }
+      }
 
-    photoFormData.append(
-      "is_primary",
-      index === 0 ? "true" : "false"
-    );
+      setSelectedFiles([]);
+      await api.put(`/properties/${propertyId}`, {
+        ...payload,
+        is_available: formData.is_available,
+      });
 
-    await api.post(
-      `/properties/${propertyId}/photos`,
-      photoFormData
-    );
-  }
-}
-
-navigate("/dashboard");
-
+      setSelectedFiles([]);
+      setCreatedPropertyId(null);
+      setHasPrimaryPhoto(false);
+      navigate("/dashboard");
 
     } catch (err) {
       console.error(err);
 
-      if (err.response?.data?.detail) {
+      if (propertyId) {
+        setCreatedPropertyId(propertyId);
+        const reason = typeof err.response?.data?.detail === "string"
+          ? err.response.data.detail
+          : "A photo or publishing step failed.";
+        setError(
+          `Your listing details are saved but are not public yet. ${reason} Retry to finish this same listing; it will not create a duplicate.`
+        );
+      } else if (err.response?.data?.detail) {
         setError(
           typeof err.response.data.detail === "string"
             ? err.response.data.detail
@@ -153,12 +180,12 @@ navigate("/dashboard");
       <main className="add-property-container">
 
         <div className="form-header">
-          <p className="eyebrow">ðŸ  NYUMBADIRECT</p>
+          <p className="eyebrow">NYUMBADIRECT · LANDLORD LISTINGS</p>
 
-          <h1>Add a Property</h1>
+          <h1>List a property</h1>
 
           <p>
-            Create a new rental listing for house hunters.
+            Add accurate details and clear photos so house hunters can make an informed enquiry.
           </p>
         </div>
 
@@ -183,6 +210,8 @@ navigate("/dashboard");
                 value={formData.title}
                 placeholder="e.g. Modern 2 Bedroom Apartment"
                 onChange={handleChange}
+                minLength={5}
+                maxLength={200}
                 required
               />
 
@@ -194,6 +223,8 @@ navigate("/dashboard");
                 placeholder="Describe the property, amenities and surroundings..."
                 onChange={handleChange}
                 rows="5"
+                minLength={20}
+                maxLength={5000}
                 required
               />
 
@@ -285,41 +316,50 @@ navigate("/dashboard");
               <div className="form-row">
 
                 <div>
-                  <label>County</label>
+                  <label htmlFor="property-county">County</label>
 
                   <input
+                    id="property-county"
                     type="text"
                     name="county"
                     placeholder="Nairobi"
                     value={formData.county}
                     onChange={handleChange}
+                    minLength={2}
+                    maxLength={100}
                     required
                   />
                 </div>
 
                 <div>
-                  <label>Town</label>
+                  <label htmlFor="property-town">Town</label>
 
                   <input
+                    id="property-town"
                     type="text"
                     name="town"
                     placeholder="Nairobi"
                     value={formData.town}
                     onChange={handleChange}
+                    minLength={2}
+                    maxLength={100}
                     required
                   />
                 </div>
 
               </div>
 
-              <label>Area / Estate</label>
+              <label htmlFor="property-area">Area / Estate</label>
 
               <input
+                id="property-area"
                 type="text"
                 name="area"
                 placeholder="Kilimani"
                 value={formData.area}
                 onChange={handleChange}
+                minLength={2}
+                maxLength={150}
                 required
               />
 
@@ -376,7 +416,7 @@ navigate("/dashboard");
               <div>
                 <strong>Property is available</strong>
                 <p>
-                  House hunters can see this property in search results.
+                  House hunters can see this listing in search after you finish saving it.
                 </p>
               </div>
 
@@ -401,7 +441,7 @@ navigate("/dashboard");
       htmlFor="property-photo-input"
       className="photo-file-label"
     >
-      ðŸ“· Choose Photos
+      Choose photos
     </label>
 
     <input
@@ -413,7 +453,7 @@ navigate("/dashboard");
     />
 
     <p>
-      JPG, PNG or WEBP Â· Maximum 5 MB per image
+      JPEG, PNG or WebP · Maximum 5 MB per image
     </p>
 
     {selectedFiles.length > 0 && (
@@ -453,8 +493,14 @@ navigate("/dashboard");
                 className="submit-property-btn"
               >
                 {loading
-                  ? "Creating..."
-                  : "Create Property"}
+                  ? uploading
+                    ? "Uploading photos..."
+                    : createdPropertyId
+                      ? "Finishing listing..."
+                      : "Saving listing..."
+                  : createdPropertyId
+                    ? "Retry and finish listing"
+                    : "Create listing"}
               </button>
 
             </div>

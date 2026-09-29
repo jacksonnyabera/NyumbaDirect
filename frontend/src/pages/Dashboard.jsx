@@ -996,11 +996,11 @@ function Dashboard() {
                         <div className="dashboard-property-status">
                           {property.is_available ? (
                             <span className="status-available">
-                              ● Available
+                              Live in search
                             </span>
                           ) : (
                             <span className="status-unavailable">
-                              ● Unavailable
+                              Not in search
                             </span>
                           )}
                         </div>
@@ -1032,6 +1032,12 @@ function Dashboard() {
                         <p className="dashboard-property-location">
                           📍 {formatLocation(property)}
                         </p>
+
+                        {!property.is_available && (
+                          <p className="dashboard-property-draft-note">
+                            House hunters will not find this listing until you mark it available.
+                          </p>
+                        )}
 
                         <div className="dashboard-property-features">
                           <span>
