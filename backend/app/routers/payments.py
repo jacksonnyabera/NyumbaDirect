@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
@@ -17,6 +19,8 @@ router = APIRouter(
     prefix="/payments",
     tags=["Payments"],
 )
+
+logger = logging.getLogger(__name__)
 
 
 class STKPushRequest(BaseModel):
@@ -79,10 +83,13 @@ def mpesa_stk_push(
         )
 
     except Exception as exc:
+        # Provider exceptions can contain credentials, request details, or
+        # infrastructure information. Keep diagnostics in server logs only.
+        logger.warning("M-Pesa STK initiation failed (%s)", type(exc).__name__)
         raise HTTPException(
             status_code=502,
-            detail=f"Unable to initiate M-Pesa payment: {str(exc)}",
-        )
+            detail="Unable to initiate payment right now. Please try again shortly.",
+        ) from exc
 
     promotion.phone_number = phone
 
