@@ -6,6 +6,8 @@ function Properties() {
   const [searchParams] = useSearchParams();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [slowLoading, setSlowLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
@@ -28,9 +30,11 @@ function Properties() {
 
   useEffect(() => {
     const controller = new AbortController();
+    const slowTimer = window.setTimeout(() => setSlowLoading(true), 12000);
     const timer = window.setTimeout(async () => {
       try {
         setLoading(true);
+        setSlowLoading(false);
         setError("");
 
         const response = await api.get("/properties", {
@@ -63,15 +67,20 @@ function Properties() {
           );
         }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        window.clearTimeout(slowTimer);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          setSlowLoading(false);
+        }
       }
     }, 250);
 
     return () => {
       window.clearTimeout(timer);
+      window.clearTimeout(slowTimer);
       controller.abort();
     };
-  }, [search, propertyType, bedrooms, maxRent, verifiedOnly]);
+  }, [search, propertyType, bedrooms, maxRent, verifiedOnly, retryCount]);
 
   const loadMore = async () => {
     try {
@@ -422,8 +431,20 @@ function Properties() {
             <h2>Finding homes...</h2>
 
             <p>
-              We're loading the latest available properties.
+              {slowLoading
+                ? "The property service is taking longer than usual. You can keep waiting or retry the search."
+                : "We're loading the latest available properties."}
             </p>
+
+            {slowLoading && (
+              <button
+                type="button"
+                className="retry-button"
+                onClick={() => setRetryCount((count) => count + 1)}
+              >
+                Retry search
+              </button>
+            )}
 
           </div>
         )}

@@ -68,7 +68,7 @@ def create_property(
 # ============================================================
 
 @router.get(
-    "/my",
+    "/mine",
     response_model=PropertyListResponse,
 )
 def list_my_properties(

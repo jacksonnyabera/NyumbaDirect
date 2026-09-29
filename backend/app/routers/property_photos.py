@@ -27,6 +27,19 @@ router = APIRouter(
     tags=["Property Photos"],
 )
 
+def _is_supported_image(content_type: str | None, content: bytes) -> bool:
+    if content_type == "image/jpeg":
+        return content.startswith(b"\xff\xd8\xff")
+    if content_type == "image/png":
+        return content.startswith(b"\x89PNG\r\n\x1a\n")
+    if content_type == "image/webp":
+        return (
+            len(content) >= 12
+            and content[:4] == b"RIFF"
+            and content[8:12] == b"WEBP"
+        )
+    return False
+
 
 @router.post(
     "/{property_id}/photos",
@@ -71,12 +84,26 @@ def upload_property_photo(
 
     max_size = 10 * 1024 * 1024
 
-    file_content = file.file.read()
+    # Read one byte beyond the limit so oversized uploads are rejected without
+    # buffering an attacker-controlled file of arbitrary size into memory.
+    file_content = file.file.read(max_size + 1)
+
+    if not file_content:
+        raise HTTPException(
+            status_code=400,
+            detail="Choose an image file to upload.",
+        )
 
     if len(file_content) > max_size:
         raise HTTPException(
             status_code=400,
             detail="Image must be 10MB or smaller.",
+        )
+
+    if not _is_supported_image(file.content_type, file_content):
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file does not match a supported image type.",
         )
 
     file.file.seek(0)
