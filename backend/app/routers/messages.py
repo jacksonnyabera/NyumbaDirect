@@ -1,6 +1,14 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    status,
+)
 from pydantic import BaseModel
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, joinedload
@@ -124,6 +132,7 @@ def _serialize_conversation(conversation: Conversation) -> dict:
 )
 def create_conversation(
     data: ConversationCreate,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -133,10 +142,13 @@ def create_conversation(
     The landlord/property manager is taken from the property's owner.
     """
 
+    # On databases that support row locks (including PostgreSQL), serialize
+    # creation attempts for this property. This closes the race between the
+    # duplicate lookup and insert without changing the existing schema.
     property_obj = db.scalar(
-        select(Property).where(
-            Property.id == data.property_id
-        )
+        select(Property)
+        .where(Property.id == data.property_id)
+        .with_for_update()
     )
 
     if not property_obj:
@@ -160,6 +172,7 @@ def create_conversation(
     )
 
     if existing_conversation:
+        response.status_code = status.HTTP_200_OK
         return existing_conversation
 
     conversation = Conversation(
