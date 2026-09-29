@@ -16,6 +16,12 @@ class AssistantQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=500)
 
 
+def _number_exceeds_database_range(match: re.Match[str] | None) -> bool:
+    if match is None:
+        return False
+    return int(match.group(1).replace(",", "")) > 2_147_483_647
+
+
 @router.post("/chat")
 def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
     question = data.question.strip()
@@ -30,6 +36,15 @@ def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
     )
     min_rent = re.search(r"(?:over|above|at least|minimum|min)\s*(?:ksh\s*)?([\d,]+)", lower)
     beds_match = re.search(r"(\d+)\s*(?:\+\s*)?(?:bed|bedroom)", lower)
+    if any(
+        _number_exceeds_database_range(match)
+        for match in (rent_match, min_rent, beds_match)
+    ):
+        return {
+            "reply": "That number is outside the range I can search. Please try a smaller rent or bedroom count.",
+            "properties": [],
+        }
+
     rent_limit = int(rent_match.group(1).replace(",", "")) if rent_match else None
     rent_floor = int(min_rent.group(1).replace(",", "")) if min_rent else None
     bedrooms = int(beds_match.group(1)) if beds_match else None
@@ -71,12 +86,18 @@ def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
         if property_type:
             query = query.where(Property.property_type.ilike(f"%{property_type}%"))
         if location:
-            pattern = f"%{location}%"
+            # Treat the requested location literally, not as SQL LIKE syntax.
+            escaped_location = (
+                location.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            )
+            pattern = f"%{escaped_location}%"
             query = query.where(
                 or_(
-                    Property.area.ilike(pattern),
-                    Property.town.ilike(pattern),
-                    Property.county.ilike(pattern),
+                    Property.area.ilike(pattern, escape="\\"),
+                    Property.town.ilike(pattern, escape="\\"),
+                    Property.county.ilike(pattern, escape="\\"),
                 )
             )
 

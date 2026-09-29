@@ -1,14 +1,20 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 
 function Register() {
+  const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("HOUSE_HUNTER");
+  const [role, setRole] = useState(() => {
+    const requestedRole = searchParams.get("role");
+    return ["LANDLORD", "PROPERTY_MANAGER"].includes(requestedRole)
+      ? requestedRole
+      : "HOUSE_HUNTER";
+  });
   const [verificationMethod, setVerificationMethod] = useState("EMAIL");
   const [termsAccepted, setTermsAccepted] = useState(false);
 

@@ -5,6 +5,7 @@ import {
   Route,
   Link,
   useLocation,
+  useNavigate,
   Navigate,
 } from "react-router-dom";
 
@@ -35,6 +36,9 @@ import api, { API_BASE_URL } from "./services/api";
 function Home() {
   const [listingStats, setListingStats] = useState({ available: null, verified: null });
   const [featuredProperty, setFeaturedProperty] = useState(null);
+  const [inventoryState, setInventoryState] = useState("loading");
+  const [homeSearch, setHomeSearch] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
@@ -48,14 +52,22 @@ function Home() {
             available: available.data?.total ?? 0,
             verified: verified.data?.total ?? 0,
           });
-          setFeaturedProperty(available.data?.items?.[0] || null);
+          const item = available.data?.items?.[0] || null;
+          setFeaturedProperty(item);
+          setInventoryState(item ? "available" : "empty");
         }
       })
       .catch(() => {
-        if (active) setListingStats({ available: 0, verified: 0 });
+        if (active) setInventoryState("unavailable");
       });
     return () => { active = false; };
   }, []);
+
+  const handleHomeSearch = (event) => {
+    event.preventDefault();
+    const query = homeSearch.trim();
+    navigate(query ? `/properties?search=${encodeURIComponent(query)}` : "/properties");
+  };
 
   return (
     <div className="app">
@@ -73,60 +85,57 @@ function Home() {
           <div className="hero-content">
 
             <div className="hero-badge">
-              <span>✓</span>
-              Trusted property marketplace
+              <span aria-hidden="true">N</span>
+              Rental homes across Kenya
             </div>
 
             <p className="eyebrow">
-              FIND YOUR NEXT HOME
+              A CLEARER WAY TO RENT
             </p>
 
             <h1>
-              Find a home.
+              Find a home
               <br />
-              <span>Directly.</span>
+              <span>that fits.</span>
             </h1>
 
             <p className="hero-text">
-              Discover quality rental properties and connect
-              directly with landlords and property managers —
-              without unnecessary middlemen.
+              Search rental listings by location, budget and size. Compare the details, then message the landlord or property manager directly.
             </p>
 
+            <form className="home-search-form" onSubmit={handleHomeSearch}>
+              <label className="sr-only" htmlFor="home-search">Town or neighbourhood</label>
+              <input
+                id="home-search"
+                type="search"
+                value={homeSearch}
+                onChange={(event) => setHomeSearch(event.target.value)}
+                placeholder="Town or neighbourhood"
+                autoComplete="off"
+              />
+              <button type="submit" className="search-btn">Search homes <span aria-hidden="true">→</span></button>
+            </form>
+
             <div className="hero-actions">
-
-              <Link
-                to="/properties"
-                className="search-btn"
-              >
-                Browse Homes
-                <span>→</span>
-              </Link>
-
-              <Link
-                to="/register"
-                className="secondary-btn"
-              >
-                Create Account
-              </Link>
-
+              <Link to="/properties" className="secondary-btn">Browse all homes</Link>
+              <Link to="/register?role=LANDLORD" className="secondary-btn">List a property</Link>
             </div>
 
             <div className="hero-trust">
 
               <div>
                 <strong>✓</strong>
-                Verified listings
+                Verification status shown
               </div>
 
               <div>
                 <strong>✓</strong>
-                Direct communication
+                Message the property owner
               </div>
 
               <div>
                 <strong>✓</strong>
-                Simple house hunting
+                Free to browse
               </div>
 
             </div>
@@ -144,7 +153,7 @@ function Home() {
                     const imageUrl = photo?.image_url
                       ? (photo.image_url.startsWith("http") ? photo.image_url : `${API_BASE_URL}${photo.image_url}`)
                       : null;
-                    return imageUrl ? <img src={imageUrl} alt={featuredProperty.title} loading="lazy" /> : <span>🏡</span>;
+                    return imageUrl ? <img src={imageUrl} alt={featuredProperty.title} loading="lazy" /> : <span className="home-image-fallback">Photo not provided</span>;
                   })()}
                   {featuredProperty.is_verified && <div className="verified-badge">✓ Verified</div>}
                 </div>
@@ -152,13 +161,13 @@ function Home() {
                   <div className="house-card-top">
                     <div>
                       <strong>{featuredProperty.title}</strong>
-                      <span>📍 {[featuredProperty.area, featuredProperty.town, featuredProperty.county].filter(Boolean).join(", ")}</span>
+                      <span>{[featuredProperty.area, featuredProperty.town, featuredProperty.county].filter(Boolean).join(", ") || "Location not provided"}</span>
                     </div>
                   </div>
                   <div className="house-meta">
-                    <span>🛏 {featuredProperty.bedrooms} Beds</span>
-                    <span>🚿 {featuredProperty.bathrooms} Baths</span>
-                    <span>🏠 {featuredProperty.property_type}</span>
+                    <span>{featuredProperty.bedrooms} beds</span>
+                    <span>{featuredProperty.bathrooms} baths</span>
+                    <span>{featuredProperty.property_type}</span>
                   </div>
                   <div className="price">
                     KSh {Number(featuredProperty.monthly_rent).toLocaleString()}
@@ -167,13 +176,21 @@ function Home() {
                   <Link to={`/properties/${featuredProperty.id}`} className="view-home-button">View this home →</Link>
                 </div>
               </article>
+            ) : inventoryState === "loading" || inventoryState === "unavailable" ? (
+              <div className="house-card house-card-empty">
+                <div className="house-placeholder"><span aria-hidden="true">N</span></div>
+                <div className="house-info">
+                  <div className="house-card-top"><div><strong>{inventoryState === "loading" ? "Loading current listings" : "Listings are temporarily unavailable"}</strong><span>{inventoryState === "loading" ? "Checking available rentals" : "Please browse homes or try again shortly"}</span></div></div>
+                  {inventoryState === "unavailable" && <Link to="/properties" className="view-home-button">Browse homes →</Link>}
+                </div>
+              </div>
             ) : (
               <div className="house-card">
                 <div className="house-placeholder"><span>🏡</span></div>
                 <div className="house-info">
                   <div className="house-card-top"><div><strong>List your home on NyumbaDirect</strong><span>Connect with house hunters directly</span></div></div>
-                  <p>There are no available homes listed yet. Landlords and property managers can create the first listing.</p>
-                  <Link to="/register" className="view-home-button">Create a landlord account →</Link>
+                  <p>There are no available listings right now. Check back soon or browse again later.</p>
+                  <Link to="/register?role=LANDLORD" className="view-home-button">List a property →</Link>
                 </div>
               </div>
             )}
@@ -194,13 +211,12 @@ function Home() {
               WHY NYUMBADIRECT
             </p>
 
-            <h2>
-              A simpler way to find your next home
+              <h2>
+              Search, compare and get in touch
             </h2>
 
             <p>
-              Everything you need to search, compare and
-              communicate with property owners in one place.
+              Review each listing at your own pace, then contact the person managing the property when you are ready.
             </p>
 
           </div>
@@ -210,18 +226,16 @@ function Home() {
 
             <div className="feature-card">
 
-              <div className="feature-icon">
-                ✓
+              <div className="feature-icon" aria-hidden="true">
+                01
               </div>
 
               <h3>
-                Verified Properties
+                Clear Listing Details
               </h3>
 
               <p>
-                Discover properties with verification
-                information so you can search with greater
-                confidence.
+                See whether a property has a NyumbaDirect verification badge. Always confirm details with the owner before paying.
               </p>
 
             </div>
@@ -229,8 +243,8 @@ function Home() {
 
             <div className="feature-card">
 
-              <div className="feature-icon">
-                💬
+              <div className="feature-icon" aria-hidden="true">
+                02
               </div>
 
               <h3>
@@ -238,8 +252,7 @@ function Home() {
               </h3>
 
               <p>
-                Contact landlords and property managers
-                directly through secure conversations.
+                Start a conversation from a listing and keep replies together in your inbox.
               </p>
 
             </div>
@@ -247,8 +260,8 @@ function Home() {
 
             <div className="feature-card">
 
-              <div className="feature-icon">
-                🔍
+              <div className="feature-icon" aria-hidden="true">
+                03
               </div>
 
               <h3>
@@ -256,8 +269,7 @@ function Home() {
               </h3>
 
               <p>
-                Filter homes by location, rent, bedrooms
-                and property type to find what fits you.
+                Narrow the results by location, monthly rent, bedrooms and property type.
               </p>
 
             </div>
@@ -278,7 +290,7 @@ function Home() {
             <div className="stat-card">
 
               <span className="stat-number">
-                {listingStats.available === null ? "…" : listingStats.available.toLocaleString()}
+                {listingStats.available === null ? (inventoryState === "unavailable" ? "—" : "…") : listingStats.available.toLocaleString()}
               </span>
 
               <span className="stat-label">
@@ -291,7 +303,7 @@ function Home() {
             <div className="stat-card">
 
               <span className="stat-number">
-                {listingStats.verified === null ? "…" : listingStats.verified.toLocaleString()}
+                {listingStats.verified === null ? (inventoryState === "unavailable" ? "—" : "…") : listingStats.verified.toLocaleString()}
               </span>
 
               <span className="stat-label">
@@ -304,11 +316,11 @@ function Home() {
             <div className="stat-card">
 
               <span className="stat-number">
-                3
+                Direct
               </span>
 
               <span className="stat-label">
-                Account Types
+                Landlord contact
               </span>
 
             </div>
@@ -317,11 +329,11 @@ function Home() {
             <div className="stat-card">
 
               <span className="stat-number">
-                0
+                Free
               </span>
 
               <span className="stat-label">
-                NyumbaDirect browse fee
+                Cost to browse listings
               </span>
 
             </div>
@@ -348,8 +360,7 @@ function Home() {
             </h2>
 
             <p>
-              Discover quality rental options across Kenya’s
-              most active property markets.
+              Search listings in towns and neighbourhoods across Kenya.
             </p>
 
           </div>
@@ -368,8 +379,7 @@ function Home() {
               </h3>
 
               <p>
-                Professionally managed apartments and family
-                homes near work, study and lifestyle hubs.
+                Search current listings in Nairobi by area, rent and home type.
               </p>
 
               <Link
@@ -396,8 +406,7 @@ function Home() {
               </h3>
 
               <p>
-                Homes near the coast, business districts and
-                relaxed neighbourhoods.
+                Browse rentals listed in Mombasa and surrounding neighbourhoods.
               </p>
 
               <Link
@@ -424,8 +433,7 @@ function Home() {
               </h3>
 
               <p>
-                Comfortable homes, family apartments and town
-                rentals with local convenience.
+                Find available rentals listed in Kisumu and nearby areas.
               </p>
 
               <Link
@@ -497,10 +505,7 @@ function Home() {
                 Verify & Compare
               </h3>
 
-              <p>
-                Check property details, photos, location and
-                owner information.
-              </p>
+              <p>Review photos, rent, location and any verification badge. Confirm viewing and payment details directly with the owner.</p>
 
             </div>
 
@@ -512,12 +517,11 @@ function Home() {
               </span>
 
               <h3>
-                Connect Directly
+                Contact the Owner
               </h3>
 
               <p>
-                Message landlords or property managers
-                quickly and safely.
+                Use your NyumbaDirect inbox to ask questions and arrange a viewing.
               </p>
 
             </div>
