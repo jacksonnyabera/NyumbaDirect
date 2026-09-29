@@ -3936,6 +3936,32 @@ textarea {
   margin-right: 30px;
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: #75808b;
+  font-size: 13px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e4e8ec;
+}
+
+.google-signin-wrap,
+.google-signin-button {
+  width: 100%;
+}
+
+.google-signin-button > div {
+  margin: 0 auto;
+}
+
 .ai-help-property-results {
   display: grid;
   gap: 8px;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -9,8 +10,36 @@ function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  const finishSignIn = async (accessToken) => {
+    localStorage.setItem("access_token", accessToken);
+    const meResponse = await api.get("/auth/me");
+    if (meResponse.data?.id) localStorage.setItem("user_id", String(meResponse.data.id));
+    localStorage.setItem("nyumbadirect_remember_login", "true");
+    navigate("/dashboard");
+  };
+
+  const handleGoogleCredential = async (credential) => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      const response = await api.post("/auth/google", { credential });
+      await finishSignIn(response.data?.access_token);
+    } catch (err) {
+      if (err.response?.data?.detail === "GOOGLE_PHONE_REQUIRED") {
+        setError("Add your phone number to finish creating your account.");
+      } else {
+        setError(err.response?.data?.detail || "Google sign-in failed. Please try again.");
+      }
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user_id");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -167,6 +196,13 @@ function Login() {
             {loading ? "Logging in..." : "Login to NyumbaDirect"}
           </button>
         </form>
+
+        <div className="auth-divider"><span>or</span></div>
+        <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
+        {googleLoading && <p className="auth-hint" role="status">Signing in with Google…</p>}
+        {error === "Add your phone number to finish creating your account." && (
+          <p className="auth-switch"><Link to="/register">Create your account with Google</Link></p>
+        )}
 
         <p className="auth-switch">
           Don't have an account? <Link to="/register">Create one</Link>

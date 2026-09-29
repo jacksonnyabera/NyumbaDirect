@@ -1,5 +1,9 @@
 # React + Vite
 
+## Google sign-in
+
+Set `VITE_GOOGLE_CLIENT_ID` in the frontend hosting environment to the Google Cloud **OAuth 2.0 Client ID** for a Web application. Add the production origins `https://nyumbadirect.co.ke` and `https://www.nyumbadirect.co.ke` to its authorized JavaScript origins, plus `http://localhost:5173` for local development. Set the matching client ID as `GOOGLE_CLIENT_ID` on the backend. The OAuth app's support email can be `supportnyumbadirect@gmail.com`. Google-verified sign-ins do not need an email OTP; SMTP remains necessary for password reset and other outbound email.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
