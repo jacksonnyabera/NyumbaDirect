@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../services/api";
-
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://nyumbadirect-bjig.onrender.com";
+import api, { API_BASE_URL } from "../services/api";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -70,35 +66,32 @@ function Dashboard() {
           requests.push(api.get("/promotions/my"));
         }
 
-        const responses = await Promise.all(requests);
-
-        setConversations(responses[0].data || []);
-
-        if (isLandlord && responses[1]) {
-          setProperties(
-            responses[1].data?.items ||
-              responses[1].data ||
-              []
-          );
-        }
-
-        if (isLandlord && responses[2]) {
-          setPromotions(responses[2].data || []);
-        }
-      } catch (err) {
-        console.error(err);
-
-        if (err.response?.status === 401) {
+        const responses = await Promise.allSettled(requests);
+        const unauthorized = responses.some(
+          (result) => result.status === "rejected" && result.reason?.response?.status === 401
+        );
+        if (unauthorized) {
           localStorage.removeItem("access_token");
           localStorage.removeItem("user_id");
+          localStorage.removeItem("user");
           navigate("/login");
           return;
         }
 
-        setError(
-          err.response?.data?.detail ||
-            "Unable to load your dashboard."
-        );
+        if (responses[0]?.status === "fulfilled") {
+          const data = responses[0].value.data;
+          setConversations(data.items || data || []);
+        }
+        if (isLandlord && responses[1]?.status === "fulfilled") {
+          const data = responses[1].value.data;
+          setProperties(data.items || data || []);
+        }
+        if (isLandlord && responses[2]?.status === "fulfilled") {
+          setPromotions(responses[2].value.data || []);
+        }
+      } catch (err) {
+        console.error("Unable to load dashboard:", err);
+        setError(err.response?.data?.detail || "Unable to load your dashboard.");
       } finally {
         setLoading(false);
       }
@@ -415,7 +408,7 @@ function Dashboard() {
       return photo.image_url;
     }
 
-    return `${API_URL}${photo.image_url}`;
+    return `${API_BASE_URL}${photo.image_url}`;
   };
 
   const formatPropertyType = (type) => {

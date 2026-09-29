@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
-const API_URL = "http://127.0.0.1:8000";
+import api, { API_BASE_URL } from "../services/api";
 const FAVORITES_KEY = "nyumbadirect_favorites";
 
 function SavedHomes() {
@@ -32,17 +31,11 @@ function SavedHomes() {
         return;
       }
 
-      const response = await fetch(
-        `${API_URL}/properties?limit=100`
-      );
+      const response = await api.get("/properties", {
+        params: { limit: 100 },
+      });
 
-      if (!response.ok) {
-        throw new Error(
-          "Unable to load properties."
-        );
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       const allProperties =
         Array.isArray(data)
@@ -129,7 +122,7 @@ function SavedHomes() {
       return photo.image_url;
     }
 
-    return `${API_URL}${photo.image_url}`;
+    return `${API_BASE_URL}${photo.image_url}`;
   };
 
   const formatPropertyType = (type) => {

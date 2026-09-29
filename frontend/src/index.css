@@ -3936,6 +3936,34 @@ textarea {
   margin-right: 30px;
 }
 
+.ai-help-property-results {
+  display: grid;
+  gap: 8px;
+  margin: 0 28px 12px 0;
+}
+
+.ai-help-property-card {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  color: #0f172a;
+  text-decoration: none;
+  background: #fff;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.ai-help-property-card:hover {
+  border-color: #0f766e;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, .1);
+}
+
+.ai-help-property-card span,
+.ai-help-property-card small {
+  color: #475569;
+}
+
 .ai-help-form {
   padding: 14px;
   background: white;
@@ -3959,6 +3987,88 @@ textarea {
   border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.ai-help-form button:disabled,
+.ai-help-form input:disabled {
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+.public-info-page {
+  min-height: 100vh;
+  padding: 40px 20px 72px;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.public-info-shell {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 56px);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, .07);
+}
+
+.public-info-logo {
+  display: inline-block;
+  margin-bottom: 28px;
+  color: #0f172a;
+  text-decoration: none;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.public-info-logo span {
+  color: #0f766e;
+}
+
+.public-info-kicker {
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.public-info-shell h1 {
+  margin: 8px 0;
+  font-size: clamp(32px, 5vw, 46px);
+}
+
+.public-info-updated {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.public-info-shell h2 {
+  margin: 30px 0 8px;
+  font-size: 19px;
+}
+
+.public-info-shell p {
+  line-height: 1.75;
+}
+
+.public-info-shell a:not(.logo) {
+  color: #0f766e;
+}
+
+.public-info-contact {
+  display: inline-block;
+  margin: 4px 0 14px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.public-info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
 }
 
 

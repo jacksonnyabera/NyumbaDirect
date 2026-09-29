@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -21,6 +21,10 @@ import SavedHomes from "./pages/SavedHomes";
 import BoostProperty from "./pages/BoostProperty";
 import Navigation from "./components/Navigation";
 import AdminVerification from "./pages/AdminVerification";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import PublicInfo from "./pages/PublicInfo";
+import api, { API_BASE_URL } from "./services/api";
 
 
 /* =========================================================
@@ -28,6 +32,30 @@ import AdminVerification from "./pages/AdminVerification";
    ========================================================= */
 
 function Home() {
+  const [listingStats, setListingStats] = useState({ available: null, verified: null });
+  const [featuredProperty, setFeaturedProperty] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      api.get("/properties", { params: { limit: 1 } }),
+      api.get("/properties", { params: { limit: 1, verified_only: true } }),
+    ])
+      .then(([available, verified]) => {
+        if (active) {
+          setListingStats({
+            available: available.data?.total ?? 0,
+            verified: verified.data?.total ?? 0,
+          });
+          setFeaturedProperty(available.data?.items?.[0] || null);
+        }
+      })
+      .catch(() => {
+        if (active) setListingStats({ available: 0, verified: 0 });
+      });
+    return () => { active = false; };
+  }, []);
+
   return (
     <div className="app">
 
@@ -105,82 +133,49 @@ function Home() {
           </div>
 
 
-          {/* HERO PROPERTY CARD */}
-
+          {/* A real listing card keeps homepage claims tied to current inventory. */}
           <div className="hero-image">
-
-            <div className="house-card">
-
-              <div className="house-placeholder">
-
-                <span>
-                  🏡
-                </span>
-
-                <div className="verified-badge">
-                  ✓ Verified
+            {featuredProperty ? (
+              <article className="house-card">
+                <div className="house-placeholder">
+                  {(() => {
+                    const photo = featuredProperty.photos?.find((item) => item.is_primary) || featuredProperty.photos?.[0];
+                    const imageUrl = photo?.image_url
+                      ? (photo.image_url.startsWith("http") ? photo.image_url : `${API_BASE_URL}${photo.image_url}`)
+                      : null;
+                    return imageUrl ? <img src={imageUrl} alt={featuredProperty.title} loading="lazy" /> : <span>🏡</span>;
+                  })()}
+                  {featuredProperty.is_verified && <div className="verified-badge">✓ Verified</div>}
                 </div>
-
-              </div>
-
-
-              <div className="house-info">
-
-                <div className="house-card-top">
-
-                  <div>
-
-                    <strong>
-                      Modern Family Home
-                    </strong>
-
-                    <span>
-                      📍 Nairobi, Kenya
-                    </span>
-
+                <div className="house-info">
+                  <div className="house-card-top">
+                    <div>
+                      <strong>{featuredProperty.title}</strong>
+                      <span>📍 {[featuredProperty.area, featuredProperty.town, featuredProperty.county].filter(Boolean).join(", ")}</span>
+                    </div>
                   </div>
-
-
-                  <button
-                    type="button"
-                    className="favorite-btn"
-                    aria-label="Save property"
-                  >
-                    ♡
-                  </button>
-
+                  <div className="house-meta">
+                    <span>🛏 {featuredProperty.bedrooms} Beds</span>
+                    <span>🚿 {featuredProperty.bathrooms} Baths</span>
+                    <span>🏠 {featuredProperty.property_type}</span>
+                  </div>
+                  <div className="price">
+                    KSh {Number(featuredProperty.monthly_rent).toLocaleString()}
+                    <small> / month</small>
+                  </div>
+                  <Link to={`/properties/${featuredProperty.id}`} className="view-home-button">View this home →</Link>
                 </div>
-
-
-                <div className="house-meta">
-
-                  <span>
-                    🛏 3 Beds
-                  </span>
-
-                  <span>
-                    🚿 2 Baths
-                  </span>
-
-                  <span>
-                    🏠 House
-                  </span>
-
+              </article>
+            ) : (
+              <div className="house-card">
+                <div className="house-placeholder"><span>🏡</span></div>
+                <div className="house-info">
+                  <div className="house-card-top"><div><strong>List your home on NyumbaDirect</strong><span>Connect with house hunters directly</span></div></div>
+                  <p>There are no available homes listed yet. Landlords and property managers can create the first listing.</p>
+                  <Link to="/register" className="view-home-button">Create a landlord account →</Link>
                 </div>
-
-
-                <div className="price">
-                  KSh 35,000
-                  <small>
-                    {" "}
-                    / month
-                  </small>
-                </div>
-
               </div>
-
-            </div>
-
+            )}
           </div>
 
         </section>
@@ -282,7 +277,20 @@ function Home() {
             <div className="stat-card">
 
               <span className="stat-number">
-                2k+
+                {listingStats.available === null ? "…" : listingStats.available.toLocaleString()}
+              </span>
+
+              <span className="stat-label">
+                Available Homes
+              </span>
+
+            </div>
+
+
+            <div className="stat-card">
+
+              <span className="stat-number">
+                {listingStats.verified === null ? "…" : listingStats.verified.toLocaleString()}
               </span>
 
               <span className="stat-label">
@@ -295,11 +303,11 @@ function Home() {
             <div className="stat-card">
 
               <span className="stat-number">
-                8+
+                3
               </span>
 
               <span className="stat-label">
-                Major Kenyan Towns
+                Account Types
               </span>
 
             </div>
@@ -308,24 +316,11 @@ function Home() {
             <div className="stat-card">
 
               <span className="stat-number">
-                24hr
+                0
               </span>
 
               <span className="stat-label">
-                Direct Response
-              </span>
-
-            </div>
-
-
-            <div className="stat-card">
-
-              <span className="stat-number">
-                0%
-              </span>
-
-              <span className="stat-label">
-                Hidden Agent Fees
+                NyumbaDirect browse fee
               </span>
 
             </div>
@@ -377,7 +372,7 @@ function Home() {
               </p>
 
               <Link
-                to="/properties"
+                to="/properties?search=Nairobi"
                 className="city-link"
               >
                 Explore Nairobi
@@ -405,7 +400,7 @@ function Home() {
               </p>
 
               <Link
-                to="/properties"
+                to="/properties?search=Mombasa"
                 className="city-link"
               >
                 Explore Mombasa
@@ -433,7 +428,7 @@ function Home() {
               </p>
 
               <Link
-                to="/properties"
+                to="/properties?search=Kisumu"
                 className="city-link"
               >
                 Explore Kisumu
@@ -820,6 +815,41 @@ function getRouteMeta(pathname) {
       keywords: "",
 
       index: false,
+    },
+
+    "/forgot-password": {
+      title: "Reset Password | NyumbaDirect Kenya",
+      description: "Request a secure password reset link for your NyumbaDirect account.",
+      keywords: "",
+      index: false,
+    },
+
+    "/reset-password": {
+      title: "Choose a New Password | NyumbaDirect Kenya",
+      description: "Set a new password for your NyumbaDirect account.",
+      keywords: "",
+      index: false,
+    },
+
+    "/contact": {
+      title: "Contact NyumbaDirect | Kenya Property Marketplace",
+      description: "Contact NyumbaDirect for account, listing, verification, payment or safety support.",
+      keywords: "NyumbaDirect contact, Kenya property support",
+      index: true,
+    },
+
+    "/privacy-policy": {
+      title: "Privacy Policy | NyumbaDirect Kenya",
+      description: "Learn how NyumbaDirect uses account, property listing, messaging and promotion information.",
+      keywords: "NyumbaDirect privacy policy",
+      index: true,
+    },
+
+    "/terms-conditions": {
+      title: "Terms of Use | NyumbaDirect Kenya",
+      description: "Terms for searching homes, publishing property listings, messaging and paid property promotions.",
+      keywords: "NyumbaDirect terms of use",
+      index: true,
     },
 
 
@@ -1259,257 +1289,118 @@ function AppSEO() {
    ========================================================= */
 
 function AIHelpAssistant() {
+  const [open, setOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [sending, setSending] = useState(false);
+  const [answers, setAnswers] = useState([
+    {
+      from: "assistant",
+      text: "Hi, I’m NyumbaDirect AI Help. Ask me to find a home, compare rent, or explain how to list or contact a landlord.",
+    },
+  ]);
+  const chatRef = React.useRef(null);
 
-  const [open, setOpen] =
-    useState(false);
+  useEffect(() => {
+    if (open && chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [answers, open, sending]);
 
-  const [question, setQuestion] =
-    useState("");
+  const handleAsk = async (event) => {
+    event?.preventDefault();
+    const cleanQuestion = question.trim();
+    if (!cleanQuestion || sending) return;
 
-  const [answers, setAnswers] =
-    useState([
+    setQuestion("");
+    setAnswers((previous) => [...previous, { from: "user", text: cleanQuestion }]);
+    setSending(true);
 
-      {
-        from: "assistant",
-
-        text:
-          "Hi, I’m NyumbaDirect AI Help. Ask about rents, homes, locations or listing steps.",
-      },
-
-    ]);
-
-
-  const getQuickAnswer =
-    (text) => {
-
-      const q =
-        text.toLowerCase();
-
-
-      if (
-        q.includes("rent") ||
-        q.includes("price") ||
-        q.includes("cost") ||
-        q.includes("monthly")
-      ) {
-
-        return (
-          "You can filter homes by rent and compare monthly rent, deposit, and property type on the properties page."
-        );
-
-      }
-
-
-      if (
-        q.includes("house") ||
-        q.includes("home") ||
-        q.includes("property") ||
-        q.includes("listing")
-      ) {
-
-        return (
-          "Browse verified properties, then contact the landlord or property manager directly through the messages page."
-        );
-
-      }
-
-
-      if (
-        q.includes("location") ||
-        q.includes("nairobi") ||
-        q.includes("mombasa") ||
-        q.includes("kisumu")
-      ) {
-
-        return (
-          "Search by town, county, area, or estate to find homes in Nairobi, Mombasa, Kisumu, and other Kenyan locations."
-        );
-
-      }
-
-
-      if (
-        q.includes("login") ||
-        q.includes("account") ||
-        q.includes("register") ||
-        q.includes("signup")
-      ) {
-
-        return (
-          "Create a NyumbaDirect account as a house hunter or landlord/manager, then add or manage rental listings from the dashboard."
-        );
-
-      }
-
-
-      return (
-        "I can help you search homes, compare rent, check locations, and guide you through listing or messaging steps on NyumbaDirect."
-      );
-
-    };
-
-
-  const handleAsk =
-    () => {
-
-      const cleanQuestion =
-        question.trim();
-
-
-      if (!cleanQuestion) {
-        return;
-      }
-
-
-      const newAnswer =
-        getQuickAnswer(
-          cleanQuestion
-        );
-
-
-      setAnswers(
-        (previous) => [
-
-          ...previous,
-
-          {
-            from: "user",
-            text: cleanQuestion,
-          },
-
-          {
-            from: "assistant",
-            text: newAnswer,
-          },
-
-        ]
-      );
-
-
-      setQuestion("");
-
-    };
-
+    try {
+      const response = await api.post("/assistant/chat", { question: cleanQuestion });
+      setAnswers((previous) => [
+        ...previous,
+        {
+          from: "assistant",
+          text: response.data?.reply || "I’m here to help. Try asking about homes, rent or landlord contact.",
+          properties: response.data?.properties || [],
+        },
+      ]);
+    } catch (error) {
+      console.error("NyumbaDirect assistant request failed:", error);
+      setAnswers((previous) => [
+        ...previous,
+        {
+          from: "assistant",
+          text: "I can’t reach the help service right now. Please try again, or browse current homes directly.",
+          properties: [],
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
-
     <div className="ai-assistant">
-
       <button
         type="button"
         className="ai-assistant-toggle"
-        onClick={() =>
-          setOpen(
-            (value) =>
-              !value
-          )
-        }
-        aria-label="Open NyumbaDirect AI help"
+        onClick={() => setOpen((value) => !value)}
+        aria-label={open ? "Close NyumbaDirect AI help" : "Open NyumbaDirect AI help"}
+        aria-expanded={open}
       >
-
-        {open
-          ? "×"
-          : "AI"}
-
+        {open ? "×" : "AI"}
       </button>
 
-
       {open && (
-
-        <div className="ai-help-panel">
-
-
+        <section className="ai-help-panel" aria-label="NyumbaDirect AI Help">
           <div className="ai-help-header">
-
             <div>
-
-              <span className="ai-help-kicker">
-                NyumbaDirect AI
-              </span>
-
-              <h3>
-                Home Help
-              </h3>
-
+              <span className="ai-help-kicker">NyumbaDirect AI</span>
+              <h3>Home Help</h3>
             </div>
-
-
-            <button
-              type="button"
-              className="ai-help-close"
-              onClick={() =>
-                setOpen(false)
-              }
-            >
-              ×
-            </button>
-
+            <button type="button" className="ai-help-close" onClick={() => setOpen(false)} aria-label="Close help">×</button>
           </div>
 
-
-          <div className="ai-help-chat">
-
-            {answers.map(
-              (item, index) => (
-
-                <div
-                  key={index}
-                  className={`ai-help-message ai-help-${item.from}`}
-                >
-
-                  {item.text}
-
-                </div>
-
-              )
-            )}
-
+          <div className="ai-help-chat" ref={chatRef} aria-live="polite">
+            {answers.map((item, index) => (
+              <div key={`${item.from}-${index}`}>
+                <div className={`ai-help-message ai-help-${item.from}`}>{item.text}</div>
+                {item.properties?.length > 0 && (
+                  <div className="ai-help-property-results">
+                    {item.properties.map((property) => (
+                      <Link key={property.id} to={`/properties/${property.id}`} className="ai-help-property-card">
+                        <strong>{property.title}</strong>
+                        <span>{[property.area, property.town].filter(Boolean).join(", ")}</span>
+                        <span>KSh {Number(property.monthly_rent).toLocaleString()} / month</span>
+                        <small>{property.bedrooms} bedroom{property.bedrooms === 1 ? "" : "s"} · View details →</small>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {sending && <div className="ai-help-message ai-help-assistant" role="status">Finding the right information…</div>}
           </div>
 
-
-          <div className="ai-help-form">
-
+          <form className="ai-help-form" onSubmit={handleAsk}>
             <input
               type="text"
               value={question}
-              onChange={(event) =>
-                setQuestion(
-                  event.target.value
-                )
-              }
-              placeholder="Ask about homes, rent or Kenya locations"
-              onKeyDown={(event) => {
-
-                if (
-                  event.key ===
-                  "Enter"
-                ) {
-
-                  handleAsk();
-
-                }
-
-              }}
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder="Ask about homes, rent or listing"
+              maxLength={500}
+              aria-label="Ask NyumbaDirect AI"
+              disabled={sending}
             />
-
-
-            <button
-              type="button"
-              onClick={handleAsk}
-            >
-              Ask
+            <button type="submit" disabled={sending || !question.trim()}>
+              {sending ? "…" : "Ask"}
             </button>
-
-          </div>
-
-        </div>
-
+          </form>
+        </section>
       )}
-
     </div>
-
   );
-
 }
 
 
@@ -1549,6 +1440,12 @@ function App() {
           path="/register"
           element={<Register />}
         />
+
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/contact" element={<PublicInfo />} />
+        <Route path="/privacy-policy" element={<PublicInfo />} />
+        <Route path="/terms-conditions" element={<PublicInfo />} />
 
 
         {/* PROPERTIES */}

@@ -1,7 +1,7 @@
 import os
+import logging
 import smtplib
 from email.message import EmailMessage
-from pathlib import Path
 
 
 class NotificationService:
@@ -23,29 +23,28 @@ class NotificationService:
                 msg["To"] = to_email
                 msg.set_content(message)
 
-                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
                     server.starttls()
                     server.login(smtp_user, smtp_password)
                     server.send_message(msg)
 
                 return True
             except Exception as exc:
-                print(f"SMTP notification failed for {to_email}: {exc}")
+                logging.warning("SMTP notification delivery failed (%s)", type(exc).__name__)
+                return False
 
-        # Fallback for local development and testing: print to terminal.
-        print("\n=== Email Notification ===")
-        print(f"To: {to_email}")
-        print(f"Subject: {subject}")
-        print(message)
-        print("===========================\n")
-
-        return True
+        # Never print message bodies: verification and reset links contain
+        # bearer tokens and application logs are not a mail delivery channel.
+        logging.warning("Email delivery is not configured; notification was not sent")
+        return False
 
     @staticmethod
     def send_verification_email(to_email: str, name: str, token: str) -> bool:
-        verification_url = (
-            f"https://www.nyumbadirect.co.ke/verify-email?token={token}"
-        )
+        api_url = os.getenv(
+            "PUBLIC_API_URL",
+            "https://nyumbadirect-bjig.onrender.com",
+        ).rstrip("/")
+        verification_url = f"{api_url}/auth/verify-email?token={token}"
         body = (
             f"Hi {name},\n\n"
             "Welcome to NyumbaDirect Kenya. Please verify your email address by visiting:\n"
@@ -88,6 +87,37 @@ class NotificationService:
         return NotificationService.send_email(
             to_email,
             "New home inquiry for your property",
+            body,
+        )
+
+    @staticmethod
+    def send_password_reset_email(to_email: str, name: str, token: str) -> bool:
+        reset_url = f"https://www.nyumbadirect.co.ke/reset-password?token={token}"
+        body = (
+            f"Hi {name},\n\n"
+            "We received a request to reset your NyumbaDirect password. Use this link within 30 minutes:\n"
+            f"{reset_url}\n\n"
+            "If you did not request this change, you can ignore this email.\n\n"
+            "NyumbaDirect Kenya"
+        )
+        return NotificationService.send_email(
+            to_email,
+            "Reset your NyumbaDirect password",
+            body,
+        )
+
+    @staticmethod
+    def send_conversation_reply_email(to_email: str, sender_name: str, property_title: str) -> bool:
+        body = (
+            f"Hi,\n\n"
+            f"{sender_name} has replied to your conversation about '{property_title}'.\n"
+            "Log in to NyumbaDirect to read and reply to the message.\n\n"
+            "Thanks,\n"
+            "NyumbaDirect Kenya"
+        )
+        return NotificationService.send_email(
+            to_email,
+            "New reply to your NyumbaDirect home inquiry",
             body,
         )
 

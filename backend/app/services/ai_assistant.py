@@ -14,6 +14,48 @@ class AIAssistantService:
     """Lightweight rule-based AI helper for property and screening workflows."""
 
     @staticmethod
+    def answer_property_question(message: str, property_obj: Any = None) -> str:
+        """Answer using listing facts only; send decisions to the property owner."""
+        lower = message.lower().strip()
+        title = getattr(property_obj, "title", None) or "this listing"
+        if property_obj is None:
+            return (
+                "I can help with search and listing details. Open a property page "
+                "to ask a question tied to that home's published information."
+            )
+
+        if any(word in lower for word in ("available", "vacant", "empty")):
+            status = "marked available" if property_obj.is_available else "marked unavailable"
+            answer = f"{title} is currently {status} in its listing. Please confirm with the landlord before arranging a viewing."
+        elif any(word in lower for word in ("rent", "price", "monthly", "cost", "deposit")):
+            rent = f"KSh {property_obj.monthly_rent:,.0f} per month"
+            answer = f"The listing shows {rent} for {title}."
+            if property_obj.deposit is not None:
+                answer += f" The listed deposit is KSh {property_obj.deposit:,.0f}."
+            else:
+                answer += " A deposit amount is not listed."
+            answer += " Confirm payment terms directly with the landlord."
+        elif any(word in lower for word in ("bed", "bath", "room", "size", "type")):
+            answer = (
+                f"The listing describes {title} as a {property_obj.property_type.lower()} "
+                f"with {property_obj.bedrooms} bedroom(s) and {property_obj.bathrooms} bathroom(s)."
+            )
+        elif any(word in lower for word in ("where", "location", "near", "town", "area", "estate")):
+            location = ", ".join(
+                part for part in (property_obj.area, property_obj.town, property_obj.county)
+                if part
+            )
+            answer = f"The listing gives the location as {location or 'not provided'}. Contact the landlord for exact directions."
+        else:
+            answer = (
+                f"I can help with {title}. The listing shows {property_obj.property_type.lower()}, "
+                f"{property_obj.bedrooms} bedroom(s), at KSh {property_obj.monthly_rent:,.0f} per month. "
+                "Ask the landlord to confirm viewing times, availability and any details not shown here."
+            )
+
+        return answer
+
+    @staticmethod
     def summarize_message(message: str) -> str:
         cleaned = message.strip()
         if not cleaned:

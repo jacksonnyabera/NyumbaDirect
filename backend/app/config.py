@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+    database_pool_timeout: int = 30
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -25,6 +28,7 @@ class Settings(BaseSettings):
     mpesa_passkey: str = ""
     mpesa_shortcode: str = ""
     mpesa_callback_url: str = ""
+    mpesa_callback_secret: str = ""
     mpesa_environment: str = "sandbox"
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""

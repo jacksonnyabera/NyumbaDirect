@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
+from secrets import compare_digest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.config import settings
 from app.dependencies import get_current_user
 from app.models.property_promotion import PropertyPromotion
 from app.models.user import User
@@ -118,8 +120,20 @@ def mpesa_stk_push(
 @router.post("/mpesa/callback")
 def mpesa_callback(
     payload: dict,
+    key: str | None = None,
     db: Session = Depends(get_db),
 ):
+    if not settings.mpesa_callback_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="M-Pesa callback authentication is not configured.",
+        )
+    if not key or not compare_digest(key, settings.mpesa_callback_secret):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid payment callback credentials.",
+        )
+
     callback = payload.get("Body", {}).get("stkCallback", {})
 
     merchant_request_id = callback.get("MerchantRequestID")

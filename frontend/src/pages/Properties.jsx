@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import api from "../services/api";
-
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://nyumbadirect-bjig.onrender.com";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import api, { API_BASE_URL } from "../services/api";
 
 function Properties() {
+  const [searchParams] = useSearchParams();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [total, setTotal] = useState(0);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("search") || "");
   const [propertyType, setPropertyType] = useState("");
   const [bedrooms, setBedrooms] = useState("");
   const [maxRent, setMaxRent] = useState("");
@@ -28,32 +27,76 @@ function Properties() {
   });
 
   useEffect(() => {
-    const loadProperties = async () => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response = await api.get("/properties");
+        const response = await api.get("/properties", {
+          params: {
+            search: search.trim() || undefined,
+            property_type: propertyType || undefined,
+            min_bedrooms: bedrooms || undefined,
+            max_rent: maxRent || undefined,
+            verified_only: verifiedOnly || undefined,
+            skip: 0,
+            limit: 24,
+          },
+          signal: controller.signal,
+        });
 
         const data = Array.isArray(response.data)
           ? response.data
           : response.data.items || [];
 
         setProperties(data);
+        setTotal(response.data.total ?? data.length);
       } catch (err) {
-        console.error(err);
-
-        setError(
-          err.response?.data?.detail ||
-            "Failed to load properties. Please try again."
-        );
+        if (err.name !== "CanceledError" && err.name !== "AbortError") {
+          console.error(err);
+          setError(
+            err.response?.data?.detail ||
+              (err.code === "ECONNABORTED"
+                ? "The property service took too long to respond. Please try again."
+                : "Failed to load properties. Please try again.")
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
-    };
+    }, 250);
 
-    loadProperties();
-  }, []);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [search, propertyType, bedrooms, maxRent, verifiedOnly]);
+
+  const loadMore = async () => {
+    try {
+      setLoadingMore(true);
+      setError("");
+      const response = await api.get("/properties", {
+        params: {
+          search: search.trim() || undefined,
+          property_type: propertyType || undefined,
+          min_bedrooms: bedrooms || undefined,
+          max_rent: maxRent || undefined,
+          verified_only: verifiedOnly || undefined,
+          skip: properties.length,
+          limit: 24,
+        },
+      });
+      const items = response.data?.items || [];
+      setProperties((current) => [...current, ...items]);
+      setTotal(response.data?.total ?? total);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Unable to load more homes. Please try again.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const toggleFavorite = (propertyId) => {
     setFavorites((previous) => {
@@ -70,49 +113,7 @@ function Properties() {
     });
   };
 
-  const filteredProperties = useMemo(() => {
-    return properties.filter((property) => {
-      const searchText = search.toLowerCase().trim();
-
-      const matchesSearch =
-        !searchText ||
-        property.title?.toLowerCase().includes(searchText) ||
-        property.county?.toLowerCase().includes(searchText) ||
-        property.town?.toLowerCase().includes(searchText) ||
-        property.area?.toLowerCase().includes(searchText) ||
-        property.property_type?.toLowerCase().includes(searchText);
-
-      const matchesType =
-        !propertyType ||
-        property.property_type === propertyType;
-
-      const matchesBedrooms =
-        !bedrooms ||
-        Number(property.bedrooms) >= Number(bedrooms);
-
-      const matchesRent =
-        !maxRent ||
-        Number(property.monthly_rent) <= Number(maxRent);
-
-      const matchesVerified =
-        !verifiedOnly || property.is_verified;
-
-      return (
-        matchesSearch &&
-        matchesType &&
-        matchesBedrooms &&
-        matchesRent &&
-        matchesVerified
-      );
-    });
-  }, [
-    properties,
-    search,
-    propertyType,
-    bedrooms,
-    maxRent,
-    verifiedOnly,
-  ]);
+  const filteredProperties = properties;
 
   const clearFilters = () => {
     setSearch("");
@@ -144,7 +145,7 @@ function Properties() {
       return photo.image_url;
     }
 
-    return `${API_URL}${photo.image_url}`;
+    return `${API_BASE_URL}${photo.image_url}`;
   };
 
   const formatPropertyType = (type) => {
@@ -390,9 +391,9 @@ function Properties() {
 
             <div>
               <strong>
-                {filteredProperties.length}
+                {total}
               </strong>{" "}
-              {filteredProperties.length === 1
+              {total === 1
                 ? "home"
                 : "homes"}{" "}
               found
@@ -663,6 +664,21 @@ function Properties() {
                 );
               })}
 
+            </div>
+          )}
+
+        {!loading &&
+          !error &&
+          properties.length < total && (
+            <div className="marketplace-load-more">
+              <button
+                type="button"
+                className="retry-button"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? "Loading more homes…" : "Load more homes"}
+              </button>
             </div>
           )}
 

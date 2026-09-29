@@ -53,7 +53,7 @@ function Register() {
     setLoading(true);
 
     try {
-      await api.post("/auth/register", {
+      const response = await api.post("/auth/register", {
         full_name: cleanFullName,
         email: cleanEmail,
         phone_number: cleanPhone,
@@ -61,7 +61,11 @@ function Register() {
         role,
       });
 
-      setSuccess("Account created successfully. A verification email has been sent. Redirecting to login...");
+      setSuccess(
+        response.data?.verification_email_sent
+          ? "Account created. Check your inbox for a verification link, then sign in. Redirecting to login..."
+          : "Account created, but we couldn't send a verification email right now. You can still sign in; contact support if you need help. Redirecting to login..."
+      );
 
       setTimeout(() => {
         navigate("/login");
@@ -94,7 +98,7 @@ function Register() {
 
         <div className="auth-intro">
           <h1>Create your account</h1>
-          <p>Join NyumbaDirect using your Gmail account.</p>
+          <p>Create an account to find or list a home.</p>
         </div>
 
         {error && (
@@ -142,7 +146,7 @@ function Register() {
                 name="email"
                 type="email"
                 value={email}
-                placeholder="you@gmail.com"
+                placeholder="you@example.com"
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
                 required

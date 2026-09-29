@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import api from "../services/api";
-
-const API_URL = "http://127.0.0.1:8000";
+import api, { API_BASE_URL } from "../services/api";
 
 function PropertyDetails() {
   const { propertyId } = useParams();
@@ -138,7 +136,7 @@ function PropertyDetails() {
       return photo.image_url;
     }
 
-    return `${API_URL}${photo.image_url}`;
+    return `${API_BASE_URL}${photo.image_url}`;
   };
 
   const formatPropertyType = (type) => {

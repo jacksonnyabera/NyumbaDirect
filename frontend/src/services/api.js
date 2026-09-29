@@ -1,10 +1,17 @@
 import axios from "axios";
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? "http://127.0.0.1:8000"
+    : "https://nyumbadirect-bjig.onrender.com")
+).replace(/\/$/, "");
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
+  // Public API hosts may need to wake from an idle period. Always fail with
+  // an actionable UI state instead of leaving screens spinning forever.
+  timeout: 45000,
 });
 
 api.interceptors.request.use(

@@ -1,5 +1,6 @@
 import base64
 from datetime import datetime
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
@@ -44,6 +45,17 @@ def generate_password(timestamp: str) -> str:
     ).decode("utf-8")
 
 
+def get_authenticated_callback_url() -> str:
+    if not settings.mpesa_callback_url or not settings.mpesa_callback_secret:
+        raise RuntimeError(
+            "M-Pesa payments require MPESA_CALLBACK_URL and MPESA_CALLBACK_SECRET."
+        )
+    parts = urlsplit(settings.mpesa_callback_url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query["key"] = settings.mpesa_callback_secret
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
 def initiate_stk_push(
     phone_number: str,
     amount: int,
@@ -70,7 +82,7 @@ def initiate_stk_push(
         "PartyA": phone_number,
         "PartyB": settings.mpesa_shortcode,
         "PhoneNumber": phone_number,
-        "CallBackURL": settings.mpesa_callback_url,
+        "CallBackURL": get_authenticated_callback_url(),
         "AccountReference": account_reference,
         "TransactionDesc": transaction_description,
     }

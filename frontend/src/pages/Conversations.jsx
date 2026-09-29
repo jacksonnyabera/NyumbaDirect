@@ -5,6 +5,8 @@ import api from "../services/api";
 function Conversations() {
   const [user, setUser] = useState(null);
   const [conversations, setConversations] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -26,11 +28,12 @@ function Conversations() {
         const [userResponse, conversationsResponse] =
           await Promise.all([
             api.get("/auth/me"),
-            api.get("/messages/conversations"),
+            api.get("/messages/conversations", { params: { skip: 0, limit: 50 } }),
           ]);
 
         setUser(userResponse.data);
-        setConversations(conversationsResponse.data || []);
+        setConversations(conversationsResponse.data?.items || []);
+        setTotal(conversationsResponse.data?.total || 0);
       } catch (err) {
         console.error("Failed to load conversations:", err);
 
@@ -53,6 +56,21 @@ function Conversations() {
 
     loadConversations();
   }, [navigate]);
+
+  const loadMoreConversations = async () => {
+    try {
+      setLoadingMore(true);
+      const response = await api.get("/messages/conversations", {
+        params: { skip: conversations.length, limit: 50 },
+      });
+      setConversations((current) => [...current, ...(response.data?.items || [])]);
+      setTotal(response.data?.total || total);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Unable to load more conversations.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -302,6 +320,12 @@ const formatDate = (dateString) => {
                           {isLandlord ? "House hunter" : contact.role}
                       </div>
 
+                      {conversation.unread_count > 0 && (
+                        <div className="conversation-unread-count" aria-label={`${conversation.unread_count} unread messages`}>
+                          {conversation.unread_count} unread
+                        </div>
+                      )}
+
                       {!isLandlord && contact.phone_number && (
                         <div className="conversation-phone">
                           📞 {contact.phone_number}
@@ -319,6 +343,18 @@ const formatDate = (dateString) => {
                   </Link>
                 );
               })}
+            </div>
+          )}
+
+          {conversations.length < total && (
+            <div className="conversations-load-more">
+              <button
+                type="button"
+                onClick={loadMoreConversations}
+                disabled={loadingMore}
+              >
+                {loadingMore ? "Loading…" : "Load more conversations"}
+              </button>
             </div>
           )}
         </section>

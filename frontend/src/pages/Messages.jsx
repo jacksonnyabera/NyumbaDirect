@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../services/api";
 
@@ -11,8 +11,11 @@ function Messages() {
   const [aiAvailable, setAiAvailable] = useState(false);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const latestMessageId = useRef(0);
 
   const currentUserId = Number(localStorage.getItem("user_id"));
 
@@ -32,15 +35,36 @@ function Messages() {
       setError("");
 
       const response = await api.get(
-        `/messages/conversations/${conversationId}/messages`
+        `/messages/conversations/${conversationId}/messages`,
+        {
+          params: showLoading || !latestMessageId.current
+            ? {}
+            : { after_id: latestMessageId.current },
+        }
       );
 
       const data = response.data || {};
 
       setConversation(data.conversation || null);
-      setMessages(data.messages || []);
+      const incoming = data.messages || [];
+      if (incoming.length) {
+        latestMessageId.current = Math.max(
+          latestMessageId.current,
+          ...incoming.map((message) => Number(message.id) || 0)
+        );
+      }
+      const readIds = new Set((data.read_message_ids || []).map(Number));
+      setMessages((previous) => {
+        const combined = showLoading
+          ? incoming
+          : [...previous, ...incoming.filter((message) => !previous.some((item) => item.id === message.id))];
+        return combined.map((message) => readIds.has(Number(message.id))
+          ? { ...message, is_read: true }
+          : message);
+      });
       setContact(data.contact || null);
       setAiAvailable(Boolean(data.ai_available));
+      if (showLoading) setHasMore(Boolean(data.has_more));
     } catch (err) {
       console.error(err);
 
@@ -63,6 +87,25 @@ function Messages() {
     }
   };
 
+  const loadOlderMessages = async () => {
+    const beforeId = Number(messages[0]?.id);
+    if (!beforeId || loadingOlder) return;
+    try {
+      setLoadingOlder(true);
+      const response = await api.get(
+        `/messages/conversations/${conversationId}/messages`,
+        { params: { before_id: beforeId, limit: 50 } }
+      );
+      const older = response.data?.messages || [];
+      setMessages((current) => [...older, ...current]);
+      setHasMore(Boolean(response.data?.has_more));
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || "Unable to load older messages.");
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
   const markMessagesAsRead = async () => {
     try {
       await api.patch(
@@ -77,19 +120,26 @@ function Messages() {
   };
 
   useEffect(() => {
-    const loadConversation = async () => {
-      await loadMessages();
-      await markMessagesAsRead();
+    let active = true;
+    let polling = false;
+    const refresh = async (initial = false) => {
+      if (!active || polling) return;
+      polling = true;
+      try {
+        await loadMessages(initial);
+        if (active) await markMessagesAsRead();
+      } finally {
+        polling = false;
+      }
     };
 
-    loadConversation();
-
-    const interval = setInterval(() => {
-      loadMessages(false);
-    }, 3000);
+    refresh(true);
+    const interval = setInterval(() => refresh(false), 5000);
 
     return () => {
+      active = false;
       clearInterval(interval);
+      latestMessageId.current = 0;
     };
   }, [conversationId]);
 
@@ -117,6 +167,11 @@ function Messages() {
       const aiReply = response.data?.ai_reply;
 
       if (sentMessage) {
+        latestMessageId.current = Math.max(
+          latestMessageId.current,
+          Number(aiReply?.id) || 0,
+          Number(sentMessage.id) || 0
+        );
         setMessages((previousMessages) => {
           const nextMessages = [...previousMessages];
 
@@ -128,10 +183,10 @@ function Messages() {
             aiReply &&
             !nextMessages.some((item) => item.id === aiReply.id)
           ) {
-            nextMessages.push(aiReply);
-          }
+              nextMessages.push(aiReply);
+            }
 
-          return nextMessages;
+          return nextMessages.sort((left, right) => Number(left.id) - Number(right.id));
         });
       }
 
@@ -291,6 +346,16 @@ function Messages() {
 
         <div className="messages-card">
           <div className="messages-list">
+            {!loading && hasMore && (
+              <button
+                type="button"
+                className="message-load-older"
+                onClick={loadOlderMessages}
+                disabled={loadingOlder}
+              >
+                {loadingOlder ? "Loading older messages…" : "Load older messages"}
+              </button>
+            )}
             {loading ? (
               <div className="messages-status">
                 <p>Loading conversation...</p>
@@ -361,7 +426,7 @@ function Messages() {
                       <small>
                         {formatMessageTime(message.created_at)}
 
-                        {!isMine && !isAi && message.is_read && (
+                        {isMine && !isAi && message.is_read && (
                           <span className="read-status"> • Read</span>
                         )}
                       </small>
@@ -405,6 +470,8 @@ function Messages() {
                   : "Reply to the house hunter..."
               }
               disabled={sending}
+              maxLength={2000}
+              aria-label="Write a message"
             />
 
             <button
@@ -418,6 +485,21 @@ function Messages() {
       </div>
 
       <style>{`
+        .message-load-older {
+          display: block;
+          margin: 4px auto 16px;
+          padding: 8px 14px;
+          border: 1px solid #cbd5e1;
+          border-radius: 999px;
+          background: #fff;
+          color: #0f766e;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .message-load-older:disabled {
+          cursor: wait;
+          opacity: .65;
+        }
         .messages-eyebrow {
           display: block;
           margin-top: 18px;

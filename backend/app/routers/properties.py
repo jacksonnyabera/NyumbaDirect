@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
@@ -126,6 +126,7 @@ def list_my_properties(
     response_model=PropertyListResponse,
 )
 def list_properties(
+    search: str | None = Query(default=None, max_length=120),
     county: str | None = None,
     town: str | None = None,
     area: str | None = None,
@@ -151,6 +152,20 @@ def list_properties(
     # --------------------------------------------------------
     # FILTERS
     # --------------------------------------------------------
+
+    if search and search.strip():
+        for token in search.strip().split()[:8]:
+            term = f"%{token}%"
+            query = query.where(
+                or_(
+                    Property.title.ilike(term),
+                    Property.description.ilike(term),
+                    Property.county.ilike(term),
+                    Property.town.ilike(term),
+                    Property.area.ilike(term),
+                    Property.property_type.ilike(term),
+                )
+            )
 
     if county:
         query = query.where(Property.county.ilike(f"%{county}%"))
@@ -237,43 +252,6 @@ def list_properties(
 # ============================================================
 # GET SINGLE PROPERTY
 # ============================================================
-
-@router.get(
-    "/mine",
-    response_model=PropertyListResponse,
-)
-def list_my_properties(
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=100),
-    current_user: User = Depends(require_landlord_or_manager),
-    db: Session = Depends(get_db),
-):
-    query = (
-        select(Property)
-        .options(
-            joinedload(Property.owner),
-            selectinload(Property.photos),
-        )
-        .where(Property.owner_id == current_user.id)
-    )
-
-    total = db.scalar(
-        select(func.count()).select_from(query.subquery())
-    )
-
-    properties = db.scalars(
-        query
-        .order_by(Property.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-    ).unique().all()
-
-    return PropertyListResponse(
-        items=properties,
-        total=total or 0,
-        skip=skip,
-        limit=limit,
-    )
 
 @router.get(
     "/{property_id}",

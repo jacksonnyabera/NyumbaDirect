@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -55,39 +55,67 @@ def _get_other_user(
     )
 
 
-def _build_ai_reply(
-    content: str,
-    property_obj: Property | None,
-) -> str | None:
-    """
-    Uses the existing AI assistant service to classify the
-    house hunter's message.
+def _serialize_message(message: Message) -> dict:
+    """Keep AI replies distinguishable without adding a DB migration."""
+    marker = "🤖 NyumbaDirect AI\n\n"
+    is_ai = message.content.startswith(marker)
+    content = message.content[len(marker):] if is_ai else message.content
+    return {
+        "id": message.id,
+        "conversation_id": message.conversation_id,
+        "sender_id": message.sender_id,
+        "content": content,
+        "is_read": message.is_read,
+        "is_ai": is_ai,
+        "created_at": message.created_at,
+        "sender": _serialize_user(message.sender),
+        "sender_name": message.sender.full_name if message.sender else None,
+    }
 
-    If the service provides a reply, return it.
-    Otherwise return None so the normal landlord conversation
-    continues without inventing an AI response.
-    """
 
-    try:
-        intent = AIAssistantService.classify_intent(content)
-
-        print(
-            f"AI intent detected: "
-            f"{intent.intent} "
-            f"confidence={intent.confidence} "
-            f"reply={intent.reply}"
-        )
-
-        ai_reply = getattr(intent, "reply", None)
-
-        if not ai_reply:
-            return None
-
-        return str(ai_reply).strip()
-
-    except Exception as exc:
-        print(f"AI assistant unavailable: {exc}")
+def _serialize_user(user: User | None) -> dict | None:
+    if user is None:
         return None
+    # Never serialize ORM users directly: that would also expose password_hash.
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "role": user.role,
+        "phone_number": user.phone_number,
+        "is_verified": user.is_verified,
+    }
+
+
+def _serialize_property(property_obj: Property | None) -> dict | None:
+    if property_obj is None:
+        return None
+    return {
+        "id": property_obj.id,
+        "title": property_obj.title,
+        "property_type": property_obj.property_type,
+        "bedrooms": property_obj.bedrooms,
+        "bathrooms": property_obj.bathrooms,
+        "monthly_rent": property_obj.monthly_rent,
+        "area": property_obj.area,
+        "town": property_obj.town,
+        "county": property_obj.county,
+        "is_available": property_obj.is_available,
+        "is_verified": property_obj.is_verified,
+    }
+
+
+def _serialize_conversation(conversation: Conversation) -> dict:
+    return {
+        "id": conversation.id,
+        "property_id": conversation.property_id,
+        "house_hunter_id": conversation.house_hunter_id,
+        "landlord_id": conversation.landlord_id,
+        "created_at": conversation.created_at,
+        "updated_at": conversation.updated_at,
+        "property": _serialize_property(conversation.property),
+        "house_hunter": _serialize_user(conversation.house_hunter),
+        "landlord": _serialize_user(conversation.landlord),
+    }
 
 
 @router.post(
@@ -149,26 +177,57 @@ def create_conversation(
 
 @router.get("/conversations")
 def list_conversations(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    conversations = db.scalars(
-        select(Conversation)
+    participant_filter = (
+        (Conversation.house_hunter_id == current_user.id)
+        | (Conversation.landlord_id == current_user.id)
+    )
+    total = db.scalar(
+        select(func.count(Conversation.id)).where(participant_filter)
+    ) or 0
+
+    unread_count = (
+        select(func.count(Message.id))
+        .where(
+            Message.conversation_id == Conversation.id,
+            Message.sender_id != current_user.id,
+            Message.is_read.is_(False),
+        )
+        .correlate(Conversation)
+        .scalar_subquery()
+    )
+    rows = db.execute(
+        select(Conversation, unread_count.label("unread_count"))
         .options(
             joinedload(Conversation.property),
             joinedload(Conversation.house_hunter),
             joinedload(Conversation.landlord),
         )
         .where(
-            (Conversation.house_hunter_id == current_user.id)
-            | (Conversation.landlord_id == current_user.id)
+            participant_filter
         )
         .order_by(
             Conversation.updated_at.desc()
         )
+        .offset(skip)
+        .limit(limit)
     ).unique().all()
-
-    return conversations
+    return {
+        "items": [
+            {
+                **_serialize_conversation(conversation),
+                "unread_count": unread,
+            }
+            for conversation, unread in rows
+        ],
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+    }
 
 
 @router.get(
@@ -217,16 +276,8 @@ def get_conversation(
     )
 
     return {
-        "id": conversation.id,
-        "property_id": conversation.property_id,
-        "house_hunter_id": conversation.house_hunter_id,
-        "landlord_id": conversation.landlord_id,
-        "created_at": conversation.created_at,
-        "updated_at": conversation.updated_at,
-        "property": conversation.property,
-        "house_hunter": conversation.house_hunter,
-        "landlord": conversation.landlord,
-        "other_user": other_user,
+        **_serialize_conversation(conversation),
+        "other_user": _serialize_user(other_user),
         "contact_phone": (
             other_user.phone_number
             if other_user
@@ -242,6 +293,7 @@ def get_conversation(
 def send_message(
     conversation_id: int,
     data: MessageCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -304,12 +356,7 @@ def send_message(
 
     db.add(message)
 
-    conversation.updated_at = datetime.now(
-        timezone.utc
-    )
-
-    db.commit()
-    db.refresh(message)
+    conversation.updated_at = datetime.now(timezone.utc)
 
     # ---------------------------------------------------------
     # GET PROPERTY + LANDLORD
@@ -331,22 +378,6 @@ def send_message(
     # NOTIFY LANDLORD / PROPERTY MANAGER
     # ---------------------------------------------------------
 
-    if (
-        landlord
-        and landlord.email
-        and property_obj
-    ):
-        try:
-            NotificationService.send_property_inquiry_email(
-                to_email=landlord.email,
-                house_hunter_name=current_user.full_name,
-                property_title=property_obj.title,
-            )
-        except Exception as exc:
-            print(
-                f"Notification email failed: {exc}"
-            )
-
     # ---------------------------------------------------------
     # AI ASSISTANCE
     # ---------------------------------------------------------
@@ -359,7 +390,7 @@ def send_message(
 
     if current_user.id == conversation.house_hunter_id:
 
-        ai_reply = _build_ai_reply(
+        ai_reply = AIAssistantService.answer_property_question(
             content,
             property_obj,
         )
@@ -385,27 +416,47 @@ def send_message(
 
             db.add(ai_message)
 
-            conversation.updated_at = datetime.now(
-                timezone.utc
-            )
+    # Save the inquiry and its optional AI guidance in one transaction.
+    db.commit()
+    db.refresh(message)
+    if ai_message:
+        db.refresh(ai_message)
 
-            db.commit()
-            db.refresh(ai_message)
+    notification_user = (
+        landlord
+        if current_user.id == conversation.house_hunter_id
+        else db.scalar(select(User).where(User.id == conversation.house_hunter_id))
+    )
+    if notification_user and notification_user.email and property_obj:
+        if current_user.id == conversation.house_hunter_id:
+            background_tasks.add_task(
+                NotificationService.send_property_inquiry_email,
+                    to_email=notification_user.email,
+                    house_hunter_name=current_user.full_name,
+                    property_title=property_obj.title,
+            )
+        else:
+            background_tasks.add_task(
+                NotificationService.send_conversation_reply_email,
+                    to_email=notification_user.email,
+                    sender_name=current_user.full_name,
+                    property_title=property_obj.title,
+            )
 
     # ---------------------------------------------------------
     # RESPONSE
     # ---------------------------------------------------------
 
     response = {
-        "message": message,
-        "ai_reply": ai_message,
+        "message": _serialize_message(message),
+        "ai_reply": _serialize_message(ai_message) if ai_message else None,
         "contact": {
             "name": (
                 landlord.full_name
                 if landlord
                 else "Landlord / Property Manager"
             ),
-            "phone": (
+                "phone_number": (
                 landlord.phone_number
                 if landlord
                 else None
@@ -426,6 +477,9 @@ def send_message(
 )
 def list_messages(
     conversation_id: int,
+    after_id: int | None = Query(default=None, ge=0),
+    before_id: int | None = Query(default=None, ge=1),
+    limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -450,7 +504,13 @@ def list_messages(
             detail="You are not a participant in this conversation.",
         )
 
-    messages = db.scalars(
+    if after_id is not None and before_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use either after_id or before_id, not both.",
+        )
+
+    query = (
         select(Message)
         .options(
             joinedload(Message.sender)
@@ -458,12 +518,47 @@ def list_messages(
         .where(
             Message.conversation_id == conversation_id
         )
-        .order_by(
-            Message.created_at.asc()
-        )
-    ).unique().all()
+    )
+    if after_id is not None:
+        query = query.where(Message.id > after_id).order_by(Message.id.asc()).limit(limit)
+    else:
+        if before_id is not None:
+            query = query.where(Message.id < before_id)
+        query = query.order_by(Message.id.desc()).limit(limit + 1)
 
-    return messages
+    messages = db.scalars(query).unique().all()
+    has_more = after_id is None and len(messages) > limit
+    if has_more:
+        messages = messages[:limit]
+    if after_id is None:
+        messages.reverse()
+
+    read_message_ids = []
+    if after_id is not None:
+        read_message_ids = db.scalars(
+            select(Message.id)
+            .where(
+                Message.conversation_id == conversation_id,
+                Message.sender_id == current_user.id,
+                Message.is_read.is_(True),
+            )
+            .order_by(Message.id.desc())
+            .limit(100)
+        ).all()
+
+    other_user = _get_other_user(conversation, current_user.id, db)
+    return {
+        "conversation": _serialize_conversation(conversation),
+        "messages": [_serialize_message(message) for message in messages],
+        "read_message_ids": read_message_ids,
+        "contact": {
+            "name": other_user.full_name if other_user else "Property owner",
+            "phone_number": other_user.phone_number if other_user else None,
+            "role": other_user.role if other_user else "LANDLORD",
+        },
+        "ai_available": current_user.id == conversation.house_hunter_id,
+        "has_more": has_more,
+    }
 
 
 @router.patch(
@@ -495,20 +590,17 @@ def mark_messages_as_read(
             detail="You are not a participant in this conversation.",
         )
 
-    unread_messages = db.scalars(
-        select(Message).where(
+    result = db.execute(
+        update(Message).where(
             Message.conversation_id == conversation_id,
             Message.sender_id != current_user.id,
             Message.is_read.is_(False),
-        )
-    ).all()
-
-    for message in unread_messages:
-        message.is_read = True
+        ).values(is_read=True)
+    )
 
     db.commit()
 
     return {
         "message": "Messages marked as read.",
-        "updated": len(unread_messages),
+        "updated": result.rowcount or 0,
     }

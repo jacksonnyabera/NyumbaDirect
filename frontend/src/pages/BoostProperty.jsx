@@ -34,6 +34,7 @@ function BoostProperty() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("");
 
   useEffect(() => {
     const loadProperty = async () => {
@@ -150,6 +151,30 @@ function BoostProperty() {
         paymentResponse.data?.message ||
           "STK Push sent. Check your M-Pesa phone and enter your PIN."
       );
+
+      setPaymentStatus("PENDING");
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        try {
+          const statusResponse = await api.get(
+            `/payments/mpesa/status/${promotion.id}`
+          );
+          const status = String(statusResponse.data?.payment_status || "").toUpperCase();
+          if (status === "PAID") {
+            setPaymentStatus("PAID");
+            setMessage("Payment confirmed. Your property boost is now active.");
+            return;
+          }
+          if (status === "FAILED") {
+            setPaymentStatus("FAILED");
+            setError(statusResponse.data?.result_description || "The payment was not completed. You can try again.");
+            return;
+          }
+        } catch (statusError) {
+          console.error("Unable to check boost payment status:", statusError);
+        }
+      }
+      setMessage("Your payment is still awaiting confirmation. Check your M-Pesa phone or review the status from your dashboard.");
     } catch (err) {
       console.error(err);
 
@@ -280,8 +305,8 @@ function BoostProperty() {
         )}
 
         {message && (
-          <div className="boost-alert boost-alert-success">
-            ✓ {message}
+          <div className={`boost-alert ${paymentStatus === "PAID" ? "boost-alert-success" : "boost-alert-pending"}`} role="status">
+            {paymentStatus === "PAID" ? "✓ " : paymentStatus === "PENDING" ? "⌛ " : ""}{message}
           </div>
         )}
 
@@ -302,6 +327,7 @@ function BoostProperty() {
                   setSelectedPackage(item);
                   setMessage("");
                   setError("");
+                  setPaymentStatus("");
                 }}
               >
 
@@ -381,7 +407,7 @@ function BoostProperty() {
             }
           >
             {paying
-              ? "Sending STK Push..."
+              ? paymentStatus === "PENDING" ? "Waiting for M-Pesa confirmation..." : "Sending STK Push..."
               : selectedPackage
                 ? `Boost for KSh ${selectedPackage.amount.toLocaleString()}`
                 : "Choose a package to continue"}
@@ -528,6 +554,11 @@ function BoostProperty() {
         .boost-alert-success {
           background: #ecfdf5;
           color: #166534;
+        }
+
+        .boost-alert-pending {
+          background: #fffbeb;
+          color: #92400e;
         }
 
         .boost-packages {

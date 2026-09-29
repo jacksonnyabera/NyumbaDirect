@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import api from "../services/api";
+import api, { API_BASE_URL } from "../services/api";
 
 function EditProperty() {
   const { propertyId } = useParams();
@@ -760,7 +760,7 @@ function EditProperty() {
                      src={
                         photo.image_url?.startsWith("http")
                          ? photo.image_url
-                         : `${import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"}${photo.image_url}`
+                         : `${API_BASE_URL}${photo.image_url}`
                   }
                   />
 

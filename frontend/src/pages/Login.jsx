@@ -99,7 +99,7 @@ function Login() {
 
         <div className="auth-intro">
           <h1>Welcome back</h1>
-          <p>Login with your Gmail account.</p>
+          <p>Sign in to continue to your NyumbaDirect account.</p>
         </div>
 
         {error && (
@@ -116,7 +116,7 @@ function Login() {
               name="email"
               type="email"
               value={email}
-              placeholder="you@gmail.com"
+              placeholder="you@example.com"
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
               required
@@ -126,7 +126,7 @@ function Login() {
           <div className="auth-field">
             <div className="auth-row">
               <label htmlFor="password">Password</label>
-              <Link to="/" className="auth-link-muted">
+              <Link to="/forgot-password" className="auth-link-muted">
                 Forgot password?
               </Link>
             </div>

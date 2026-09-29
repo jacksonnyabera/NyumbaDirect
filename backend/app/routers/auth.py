@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,7 +15,9 @@ from app.schemas.user import (
 from app.security import (
     create_access_token,
     create_email_verification_token,
+    create_password_reset_token,
     decode_email_verification_token,
+    decode_password_reset_token,
     hash_password,
     verify_password,
 )
@@ -27,12 +30,17 @@ router = APIRouter(
 )
 
 
-def require_gmail_email(email: str) -> None:
-    if not email.lower().endswith("@gmail.com"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please use a Gmail account to register or login.",
-        )
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=20, max_length=2000)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class RegistrationResponse(UserResponse):
+    verification_email_sent: bool
 
 
 ALLOWED_REGISTRATION_ROLES = {
@@ -44,7 +52,7 @@ ALLOWED_REGISTRATION_ROLES = {
 
 @router.post(
     "/register",
-    response_model=UserResponse,
+    response_model=RegistrationResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def register_user(
@@ -52,7 +60,6 @@ def register_user(
     db: Session = Depends(get_db),
 ):
     email = user_data.email.strip().lower()
-    require_gmail_email(email)
     phone_number = user_data.phone_number.strip()
     full_name = user_data.full_name.strip()
     role = user_data.role.strip().upper()
@@ -120,13 +127,15 @@ def register_user(
     db.refresh(user)
 
     verification_token = create_email_verification_token(user.email)
-    NotificationService.send_verification_email(
+    verification_email_sent = NotificationService.send_verification_email(
         to_email=user.email,
         name=user.full_name,
         token=verification_token,
     )
 
-    return user
+    response = UserResponse.model_validate(user).model_dump()
+    response["verification_email_sent"] = verification_email_sent
+    return response
 
 
 @router.get(
@@ -170,6 +179,50 @@ def verify_email(
     }
 
 
+@router.post("/forgot-password")
+def request_password_reset(
+    data: PasswordResetRequest,
+    db: Session = Depends(get_db),
+):
+    email = str(data.email).strip().lower()
+    user = db.scalar(select(User).where(User.email == email))
+    if user:
+        token = create_password_reset_token(user.email)
+        NotificationService.send_password_reset_email(
+            to_email=user.email,
+            name=user.full_name,
+            token=token,
+        )
+    # The same response for known and unknown emails prevents account discovery.
+    return {
+        "message": "If an account uses that email address, password reset instructions will be sent.",
+    }
+
+
+@router.post("/reset-password")
+def reset_password(
+    data: PasswordResetConfirm,
+    db: Session = Depends(get_db),
+):
+    payload = decode_password_reset_token(data.token)
+    email = payload.get("sub") if payload else None
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or has expired.",
+        )
+
+    user = db.scalar(select(User).where(User.email == email))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or has expired.",
+        )
+    user.password_hash = hash_password(data.password)
+    db.commit()
+    return {"message": "Your password has been updated. You can now sign in."}
+
+
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -179,7 +232,6 @@ def login_user(
     db: Session = Depends(get_db),
 ):
     email = login_data.email.strip().lower()
-    require_gmail_email(email)
 
     user = db.scalar(
         select(User).where(User.email == email)

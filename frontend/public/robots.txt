@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /dashboard
+Disallow: /messages
+Disallow: /saved-homes
+Disallow: /forgot-password
+Disallow: /reset-password
 
 Sitemap: https://www.nyumbadirect.co.ke/sitemap.xml
