@@ -239,6 +239,43 @@ def list_properties(
 # ============================================================
 
 @router.get(
+    "/my",
+    response_model=PropertyListResponse,
+)
+def list_my_properties(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
+    current_user: User = Depends(require_landlord_or_manager),
+    db: Session = Depends(get_db),
+):
+    query = (
+        select(Property)
+        .options(
+            joinedload(Property.owner),
+            selectinload(Property.photos),
+        )
+        .where(Property.owner_id == current_user.id)
+    )
+
+    total = db.scalar(
+        select(func.count()).select_from(query.subquery())
+    )
+
+    properties = db.scalars(
+        query
+        .order_by(Property.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    ).unique().all()
+
+    return PropertyListResponse(
+        items=properties,
+        total=total or 0,
+        skip=skip,
+        limit=limit,
+    )
+
+@router.get(
     "/{property_id}",
     response_model=PropertyResponse,
 )

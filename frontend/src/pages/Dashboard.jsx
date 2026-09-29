@@ -66,7 +66,7 @@ function Dashboard() {
         ];
 
         if (isLandlord) {
-          requests.push(api.get("/properties"));
+          requests.push(api.get("/properties/mine"));
           requests.push(api.get("/promotions/my"));
         }
 
