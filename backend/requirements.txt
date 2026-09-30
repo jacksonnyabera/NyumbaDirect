@@ -11,5 +11,4 @@ pwdlib[argon2]
 email-validator
 python-multipart
 requests
-google-auth
 cloudinary
