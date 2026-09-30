@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 
-const SUPPORT_EMAIL = "maobe928@gmail.com";
+const SUPPORT_EMAIL = "supportnyumbadirect@gmail.com";
 
 function PublicInfo() {
   const { pathname } = useLocation();

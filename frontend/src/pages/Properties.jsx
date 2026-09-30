@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
+import { getBedroomDisplay } from "../utils/propertyDisplay";
 
 function Properties() {
   const [searchParams] = useSearchParams();
@@ -610,14 +611,7 @@ function Properties() {
 
                       <div className="marketplace-specs">
 
-                        <span>
-                          🛏{" "}
-                          {property.bedrooms ?? 0}
-                          <small>
-                            {" "}
-                            beds
-                          </small>
-                        </span>
+                        <span>🛏 {getBedroomDisplay(property).summary}</span>
 
                         <span>
                           🚿{" "}

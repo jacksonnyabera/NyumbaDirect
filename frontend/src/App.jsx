@@ -27,6 +27,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import PublicInfo from "./pages/PublicInfo";
 import api, { API_BASE_URL } from "./services/api";
+import { getBedroomDisplay } from "./utils/propertyDisplay";
 
 
 /* =========================================================
@@ -165,7 +166,7 @@ function Home() {
                     </div>
                   </div>
                   <div className="house-meta">
-                    <span>{featuredProperty.bedrooms} beds</span>
+                    <span>{getBedroomDisplay(featuredProperty).summary}</span>
                     <span>{featuredProperty.bathrooms} baths</span>
                     <span>{featuredProperty.property_type}</span>
                   </div>
@@ -667,7 +668,7 @@ function Home() {
               How It Works
             </a>
 
-            <a href="mailto:maobe928@gmail.com">
+            <a href="mailto:supportnyumbadirect@gmail.com">
               Contact Us
             </a>
 
@@ -689,8 +690,8 @@ function Home() {
                 ✉
               </span>
 
-              <a href="mailto:maobe928@gmail.com">
-                maobe928@gmail.com
+              <a href="mailto:supportnyumbadirect@gmail.com">
+                supportnyumbadirect@gmail.com
               </a>
 
             </div>
@@ -1385,7 +1386,7 @@ function AIHelpAssistant() {
                         <strong>{property.title}</strong>
                         <span>{[property.area, property.town, property.county].filter(Boolean).join(", ")}</span>
                         <span>KSh {Number(property.monthly_rent).toLocaleString()} / month</span>
-                        <small>{property.bedrooms} bedroom{property.bedrooms === 1 ? "" : "s"} · View details →</small>
+                        <small>{getBedroomDisplay(property).summary} · View details →</small>
                         {property.is_verified && <small className="ai-help-verified">✓ Verified listing</small>}
                       </Link>
                     ))}

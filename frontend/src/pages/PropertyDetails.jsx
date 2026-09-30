@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
+import { getBedroomDisplay } from "../utils/propertyDisplay";
 
 function PropertyDetails() {
   const { propertyId } = useParams();
@@ -419,12 +420,10 @@ function PropertyDetails() {
                 </span>
 
                 <div>
-                  <strong>
-                    {property.bedrooms ?? 0}
-                  </strong>
+                  <strong>{getBedroomDisplay(property).value}</strong>
 
                   <small>
-                    Bedrooms
+                    {getBedroomDisplay(property).label}
                   </small>
                 </div>
 
@@ -560,12 +559,10 @@ function PropertyDetails() {
                 </div>
 
                 <div>
-                  <span>
-                    Bedrooms
-                  </span>
+                  <span>{getBedroomDisplay(property).label}</span>
 
                   <strong>
-                    {property.bedrooms ?? "—"}
+                    {getBedroomDisplay(property).value}
                   </strong>
                 </div>
 

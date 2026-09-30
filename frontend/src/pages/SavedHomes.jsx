@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
+import { getBedroomDisplay } from "../utils/propertyDisplay";
 
 function SavedHomes() {
   const [properties, setProperties] = useState([]);
@@ -325,11 +326,7 @@ function SavedHomes() {
                       </p>
 
                       <div className="saved-home-features">
-                        <span>
-                          🛏{" "}
-                          {property.bedrooms ?? 0}{" "}
-                          Beds
-                        </span>
+                        <span>🛏 {getBedroomDisplay(property).summary}</span>
 
                         <span>
                           🚿{" "}

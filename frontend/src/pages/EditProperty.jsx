@@ -418,14 +418,14 @@ function EditProperty() {
               <div className="form-row">
 
                 <div>
-                  <label>
-                    Bedrooms
+                    <label>
+                    Bedrooms {/(bedsitter|studio|bachelor)/i.test(formData.property_type) ? "(enter 0 for a studio or bedsitter)" : ""}
                   </label>
 
                   <input
                     type="number"
                     name="bedrooms"
-                    min="0"
+                    min={/(bedsitter|studio|bachelor)/i.test(formData.property_type) ? 0 : 1}
                     value={formData.bedrooms}
                     onChange={handleChange}
                     required

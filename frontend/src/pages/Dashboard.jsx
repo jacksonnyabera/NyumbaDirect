@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
+import { getBedroomDisplay } from "../utils/propertyDisplay";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -8,9 +9,6 @@ function Dashboard() {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [promotions, setPromotions] = useState([]);
-  const [paymentChecking, setPaymentChecking] = useState({});
-  const [retryingPromotion, setRetryingPromotion] = useState(null);
   const [verification, setVerification] = useState(null);
   const [verificationLoading, setVerificationLoading] = useState(false);
 
@@ -63,7 +61,6 @@ function Dashboard() {
 
         if (isLandlord) {
           requests.push(api.get("/properties/mine"));
-          requests.push(api.get("/promotions/my"));
         }
 
         const responses = await Promise.allSettled(requests);
@@ -85,9 +82,6 @@ function Dashboard() {
         if (isLandlord && responses[1]?.status === "fulfilled") {
           const data = responses[1].value.data;
           setProperties(data.items || data || []);
-        }
-        if (isLandlord && responses[2]?.status === "fulfilled") {
-          setPromotions(responses[2].value.data || []);
         }
       } catch (err) {
         console.error("Unable to load dashboard:", err);
@@ -138,231 +132,6 @@ function Dashboard() {
           "Unable to delete property."
       );
     }
-  };
-
-  const loadPromotions = async () => {
-    try {
-      const response = await api.get("/promotions/my");
-      setPromotions(response.data || []);
-    } catch (err) {
-      console.error("Unable to load promotions:", err);
-    }
-  };
-
-  const handlePaymentStatus = async (promotionId) => {
-    try {
-      setPaymentChecking((current) => ({
-        ...current,
-        [promotionId]: true,
-      }));
-
-      const response = await api.get(
-        `/payments/mpesa/status/${promotionId}`
-      );
-
-      setPromotions((current) =>
-        current.map((promotion) =>
-          promotion.id === promotionId
-            ? { ...promotion, ...response.data }
-            : promotion
-        )
-      );
-
-      return response.data;
-    } catch (err) {
-      console.error("Unable to check payment status:", err);
-      return null;
-    } finally {
-      setPaymentChecking((current) => ({
-        ...current,
-        [promotionId]: false,
-      }));
-    }
-  };
-
-  const sendPayment = async (promotionId, phoneNumber) => {
-    const response = await api.post(
-      "/payments/mpesa/stk-push",
-      {
-        promotion_id: promotionId,
-        phone_number: phoneNumber,
-      }
-    );
-
-    setPromotions((current) =>
-      current.map((promotion) =>
-        promotion.id === promotionId
-          ? {
-              ...promotion,
-              payment_status: "PENDING",
-              phone_number: phoneNumber,
-              checkout_request_id:
-                response.data?.checkout_request_id ||
-                promotion.checkout_request_id,
-              merchant_request_id:
-                response.data?.merchant_request_id ||
-                promotion.merchant_request_id,
-            }
-          : promotion
-      )
-    );
-
-    return response.data;
-  };
-
-  const waitForPayment = async (promotionId) => {
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-
-      const result = await handlePaymentStatus(promotionId);
-      const status = String(
-        result?.payment_status || ""
-      ).toUpperCase();
-
-      if (status === "PAID") {
-        alert(
-          "Payment received successfully! Your property boost is now active."
-        );
-        await loadPromotions();
-        return;
-      }
-
-      if (status === "FAILED") {
-        alert(
-          result?.result_description ||
-            "Payment failed. You can retry with the correct M-Pesa number."
-        );
-        await loadPromotions();
-        return;
-      }
-    }
-  };
-
-  const handleBoost = async (propertyId, packageName) => {
-    try {
-      const promotionResponse = await api.post("/promotions", {
-        property_id: propertyId,
-        package: packageName,
-      });
-
-      const promotion = promotionResponse.data;
-
-      const phoneNumber = window.prompt(
-        "Enter the M-Pesa number to pay with:\n\n" +
-          "Example: 0712345678\n\n" +
-          "Make sure this is the correct number."
-      );
-
-      if (!phoneNumber) {
-        return;
-      }
-
-      const paymentResponse = await sendPayment(
-        promotion.id,
-        phoneNumber.trim()
-      );
-
-      alert(
-        paymentResponse.message ||
-          "STK Push sent. Check your M-Pesa phone and enter your PIN."
-      );
-
-      await loadPromotions();
-      waitForPayment(promotion.id);
-    } catch (err) {
-      console.error(err);
-
-      if (err.response?.status === 401) {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("user_id");
-        navigate("/login");
-        return;
-      }
-
-      alert(
-        err.response?.data?.detail ||
-          "Unable to start M-Pesa payment."
-      );
-    }
-  };
-
-  const handleRetryPayment = async (promotion) => {
-    try {
-      setRetryingPromotion(promotion.id);
-
-      const phoneNumber = window.prompt(
-        "Enter the correct M-Pesa number:\n\n" +
-          "Example: 0712345678"
-      );
-
-      if (!phoneNumber) {
-        return;
-      }
-
-      const paymentResponse = await sendPayment(
-        promotion.id,
-        phoneNumber.trim()
-      );
-
-      alert(
-        paymentResponse.message ||
-          "New STK Push sent. Check the selected M-Pesa number."
-      );
-
-      await loadPromotions();
-      waitForPayment(promotion.id);
-    } catch (err) {
-      console.error(err);
-
-      if (err.response?.status === 401) {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("user_id");
-        navigate("/login");
-        return;
-      }
-
-      alert(
-        err.response?.data?.detail ||
-          "Unable to retry the M-Pesa payment."
-      );
-    } finally {
-      setRetryingPromotion(null);
-    }
-  };
-
-  const handleBoostSelection = (propertyId) => {
-    const choice = window.prompt(
-      "Choose a boost package:\n\n" +
-        "1. 7 Days - KSh 300\n" +
-        "2. 14 Days - KSh 700\n" +
-        "3. 30 Days - KSh 1,500\n\n" +
-        "Enter 1, 2 or 3:"
-    );
-
-    const packages = {
-      "1": "7_DAYS",
-      "2": "14_DAYS",
-      "3": "30_DAYS",
-    };
-
-    if (choice && packages[choice]) {
-      handleBoost(propertyId, packages[choice]);
-    }
-  };
-
-  const formatPromotionDate = (value) => {
-    if (!value) return "Not available";
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return "Not available";
-    }
-
-    return date.toLocaleString("en-KE", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
   };
 
   const isLandlord =
@@ -467,100 +236,6 @@ function Dashboard() {
 
   return (
     <>
-      <style>{`
-        .promotion-list {
-          display: grid;
-          gap: 16px;
-        }
-        .promotion-card {
-          border: 1px solid rgba(15, 23, 42, 0.08);
-          border-radius: 18px;
-          padding: 20px;
-          background: #fff;
-          box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
-        }
-        .promotion-card-main {
-          display: flex;
-          justify-content: space-between;
-          gap: 20px;
-        }
-        .promotion-card h3 {
-          margin: 6px 0 10px;
-        }
-        .promotion-card p {
-          margin: 5px 0;
-        }
-        .promotion-card-status {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 7px;
-          min-width: 110px;
-        }
-        .promotion-status {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 7px 12px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 800;
-        }
-        .promotion-status-paid {
-          background: #dcfce7;
-          color: #166534;
-        }
-        .promotion-status-pending {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        .promotion-status-failed {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-        .promotion-details {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 18px;
-          margin-top: 16px;
-          padding-top: 14px;
-          border-top: 1px solid rgba(15, 23, 42, 0.08);
-          font-size: 13px;
-        }
-        .promotion-pending-message,
-        .promotion-error-message {
-          margin-top: 14px;
-          padding: 11px 13px;
-          border-radius: 10px;
-          font-size: 13px;
-        }
-        .promotion-pending-message {
-          background: #fffbeb;
-          color: #92400e;
-        }
-        .promotion-error-message {
-          background: #fef2f2;
-          color: #991b1b;
-        }
-        .promotion-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-top: 15px;
-        }
-        @media (max-width: 640px) {
-          .promotion-card-main {
-            flex-direction: column;
-          }
-          .promotion-card-status {
-            align-items: flex-start;
-          }
-          .promotion-actions button {
-            width: 100%;
-          }
-        }
-      `}</style>
-
       <div className="dashboard-page">
       {/* NAVIGATION */}
       <nav className="navbar">
@@ -1040,10 +715,7 @@ function Dashboard() {
                         )}
 
                         <div className="dashboard-property-features">
-                          <span>
-                            🛏{" "}
-                            {property.bedrooms ?? 0} Beds
-                          </span>
+                          <span>🛏 {getBedroomDisplay(property).summary}</span>
 
                           <span>
                             🚿{" "}

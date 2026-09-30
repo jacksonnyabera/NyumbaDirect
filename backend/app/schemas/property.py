@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.schemas.property_photo import PropertyPhotoResponse
 
 
@@ -79,6 +79,18 @@ class PropertyCreate(BaseModel):
     )
 
     is_available: bool = True
+
+    @model_validator(mode="after")
+    def validate_bedroom_count(self):
+        is_studio_or_bedsitter = any(
+            kind in self.property_type.casefold()
+            for kind in ("studio", "bedsitter", "bachelor")
+        )
+        if self.bedrooms == 0 and not is_studio_or_bedsitter:
+            raise ValueError(
+                "Enter at least one bedroom, or choose Studio/Bedsitter for a zero-bedroom home."
+            )
+        return self
 
 class PropertyOwnerResponse(BaseModel):
     id: int
