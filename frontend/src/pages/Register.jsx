@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
-import GoogleSignInButton from "../components/GoogleSignInButton";
 
 function Register() {
   const [searchParams] = useSearchParams();
@@ -20,42 +19,8 @@ function Register() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   const navigate = useNavigate();
-
-  const handleGoogleCredential = async (credential) => {
-    if (!/^\+?[0-9\s()-]{9,}$/.test(phoneNumber.trim())) {
-      setError("Enter your Kenyan phone number before continuing with Google.");
-      return;
-    }
-    if (!termsAccepted) {
-      setError("Please accept the terms to continue.");
-      return;
-    }
-    setError("");
-    setGoogleLoading(true);
-    try {
-      const response = await api.post("/auth/google", {
-        credential,
-        phone_number: phoneNumber.trim(),
-        role,
-      });
-      const accessToken = response.data?.access_token;
-      if (!accessToken) throw new Error("No access token was returned by the server.");
-      localStorage.setItem("access_token", accessToken);
-      localStorage.setItem("nyumbadirect_remember_login", "true");
-      const profile = await api.get("/auth/me");
-      if (profile.data?.id) localStorage.setItem("user_id", String(profile.data.id));
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.detail || err.message || "Google sign-up failed. Please try again.");
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user_id");
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
 
   const handleRegister = async (event) => {
     event.preventDefault();
@@ -244,10 +209,7 @@ function Register() {
           </button>
         </form>
 
-        <div className="auth-divider"><span>or verify with Google</span></div>
-        <GoogleSignInButton onCredential={handleGoogleCredential} text="signup_with" />
-        {googleLoading && <p className="auth-hint" role="status">Creating your account…</p>}
-        <p className="auth-hint">Google confirms your email. Enter your phone number above and accept the terms to continue.</p>
+
 
         <p className="auth-switch">
           Already have an account? <Link to="/login">Login</Link>
