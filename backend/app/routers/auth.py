@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -7,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.models.account_verification import AccountVerification
 from app.config import settings
 from app.schemas.user import (
     TokenResponse,
@@ -24,9 +22,7 @@ from app.security import (
     verify_password,
 )
 from app.services.notifications import NotificationService
-from app.services.account_verification import (
-    check_code, generate_code, hash_code, normalize_kenyan_phone,
-)
+from app.services.account_verification import normalize_kenyan_phone
 
 
 router = APIRouter(
@@ -44,45 +40,6 @@ class PasswordResetConfirm(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
-class RegistrationResponse(UserResponse):
-    verification_method: str
-    verification_sent: bool
-
-
-class VerificationRequest(BaseModel):
-    email: EmailStr
-    code: str = Field(pattern=r"^\d{6}$")
-
-
-class ResendVerificationRequest(BaseModel):
-    email: EmailStr
-    method: str = Field(pattern=r"^(EMAIL|SMS)$")
-
-
-def _deliver_verification(user: User, method: str, code: str) -> bool:
-    if method == "SMS":
-        return NotificationService.send_verification_code_sms(user.phone_number, code)
-    return NotificationService.send_verification_code_email(user.email, user.full_name, code)
-
-
-def _new_challenge(user: User, method: str, db: Session) -> tuple[AccountVerification, str]:
-    code = generate_code()
-    now = datetime.now(timezone.utc)
-    challenge = db.scalar(
-        select(AccountVerification).where(AccountVerification.user_id == user.id)
-    )
-    if challenge is None:
-        challenge = AccountVerification(user_id=user.id)
-        db.add(challenge)
-    challenge.method = method
-    challenge.code_hash = hash_code(code)
-    challenge.expires_at = now + timedelta(minutes=settings.verification_code_ttl_minutes)
-    challenge.attempts = 0
-    challenge.last_sent_at = now
-    challenge.consumed_at = None
-    return challenge, code
-
-
 ALLOWED_REGISTRATION_ROLES = {
     "HOUSE_HUNTER",
     "LANDLORD",
@@ -92,12 +49,11 @@ ALLOWED_REGISTRATION_ROLES = {
 
 @router.post(
     "/register",
-    response_model=RegistrationResponse,
+    response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def register_user(
     user_data: UserCreate,
-    verification_method: str = Query("EMAIL", pattern="^(EMAIL|SMS)$"),
     db: Session = Depends(get_db),
 ):
     email = user_data.email.strip().lower()
@@ -170,17 +126,9 @@ def register_user(
     db.commit()
     db.refresh(user)
 
-    _, code = _new_challenge(user, verification_method, db)
-    db.commit()
-    verification_sent = _deliver_verification(user, verification_method, code)
-
-    response = UserResponse.model_validate(user).model_dump()
-    response["verification_method"] = verification_method
-    response["verification_sent"] = verification_sent
-    return response
+    return user
 
 
-@router.post("/verify-signup")
 def verify_signup(data: VerificationRequest, db: Session = Depends(get_db)):
     email = str(data.email).strip().lower()
     user = db.scalar(select(User).where(User.email == email))
@@ -348,12 +296,6 @@ def login_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Your account is inactive.",
-        )
-
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="ACCOUNT_NOT_VERIFIED",
         )
 
     access_token = create_access_token(
