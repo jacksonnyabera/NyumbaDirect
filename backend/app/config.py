@@ -19,7 +19,6 @@ class Settings(BaseSettings):
     verification_code_ttl_minutes: int = 10
     verification_code_max_attempts: int = 5
     verification_resend_cooldown_seconds: int = 60
-    google_client_id: str = ""
     sms_provider: str = ""
     sms_api_key: str = ""
     sms_username: str = "sandbox"
