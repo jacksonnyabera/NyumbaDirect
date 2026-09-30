@@ -14,7 +14,6 @@ function Register() {
       ? requestedRole
       : "HOUSE_HUNTER";
   });
-  const [verificationMethod, setVerificationMethod] = useState("EMAIL");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [error, setError] = useState("");
@@ -58,18 +57,20 @@ function Register() {
     setLoading(true);
 
     try {
-      const response = await api.post("/auth/register", {
+      await api.post("/auth/register", {
         full_name: cleanFullName,
         email: cleanEmail,
         phone_number: cleanPhone,
         password,
         role,
-      }, { params: { verification_method: verificationMethod } });
-      navigate("/verify-account", { state: {
-        email: cleanEmail,
-        method: verificationMethod,
-        deliveryPending: !response.data?.verification_sent,
-      } });
+      });
+
+      navigate("/login", {
+        state: {
+          email: cleanEmail,
+          registered: true,
+        },
+      });
     } catch (err) {
       console.error(err);
 
@@ -132,19 +133,8 @@ function Register() {
             </div>
           </div>
 
-          <div className="auth-field">
-            <label>Send my verification code by</label>
-            <div className="auth-options">
-              <label className="check-row">
-                <input type="radio" name="verificationMethod" value="EMAIL" checked={verificationMethod === "EMAIL"} onChange={() => setVerificationMethod("EMAIL")} />
-                <span>Email</span>
-              </label>
-              <label className="check-row">
-                <input type="radio" name="verificationMethod" value="SMS" checked={verificationMethod === "SMS"} onChange={() => setVerificationMethod("SMS")} />
-                <span>SMS to my phone</span>
-              </label>
-            </div>
-            <small className="auth-hint">Kenyan mobile numbers only for SMS verification.</small>
+          <div className="auth-form-note">
+            Your account will be created immediately. You can verify your profile later from your account settings.
           </div>
 
           <div className="form-grid">
