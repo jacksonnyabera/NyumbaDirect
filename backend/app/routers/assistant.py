@@ -1,8 +1,9 @@
 import re
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
+from sqlalchemy import case, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -16,10 +17,15 @@ class AssistantQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=500)
 
 
-def _number_exceeds_database_range(match: re.Match[str] | None) -> bool:
+def _rent_amount(match: re.Match[str] | None) -> int | None:
     if match is None:
-        return False
-    return int(match.group(1).replace(",", "")) > 2_147_483_647
+        return None
+    amount = float(match.group("amount").replace(",", ""))
+    if match.group("scale"):
+        amount *= 1000
+    if amount > 2_147_483_647:
+        return 2_147_483_648
+    return int(amount)
 
 
 @router.post("/chat")
@@ -30,24 +36,51 @@ def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
     if not question:
         return {"reply": "Type a question and I’ll help you get started.", "properties": []}
 
+    rent_pattern = (
+        r"(?:ksh\s*)?"
+        r"(?P<amount>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)"
+        r"\s*(?P<scale>k|thousand)?\b"
+    )
     rent_match = re.search(
-        r"(?:under|below|up to|less than|maximum|max)\s*(?:ksh\s*)?([\d,]+)",
+        rf"(?:under|below|up to|less than|maximum|max)\s*{rent_pattern}",
         lower,
     )
-    min_rent = re.search(r"(?:over|above|at least|minimum|min)\s*(?:ksh\s*)?([\d,]+)", lower)
-    beds_match = re.search(r"(\d+)\s*(?:\+\s*)?(?:bed|bedroom)", lower)
-    if any(
-        _number_exceeds_database_range(match)
-        for match in (rent_match, min_rent, beds_match)
-    ):
+    min_rent_match = re.search(
+        rf"(?:over|above|at least|minimum|min)\s*{rent_pattern}",
+        lower,
+    )
+    # A plain "2 bedroom" request means exactly two. Explicit +/minimum
+    # language asks for at least that many; "up to" asks for a maximum.
+    exact_beds = re.search(r"(?<![\d,])(\d+)\s*(?:bed|bedroom)", lower)
+    min_beds = re.search(
+        r"(?:at least|minimum|min|more than)\s*(\d+)\s*(?:\+\s*)?(?:bed|bedroom)|"
+        r"(\d+)\s*\+\s*(?:bed|bedroom)",
+        lower,
+    )
+    max_beds = re.search(
+        r"(?:up to|at most|maximum|max)\s*(\d+)\s*(?:bed|bedroom)|"
+        r"(\d+)\s*(?:bed|bedroom)(?:s)?\s*(?:or fewer|or less|maximum|max)",
+        lower,
+    )
+    count_matches = [match for match in (min_beds, max_beds) if match]
+    beds_match = exact_beds
+    if count_matches:
+        beds_match = next(iter(count_matches))
+
+    numeric_values = [
+        _rent_amount(rent_match),
+        _rent_amount(min_rent_match),
+        int(next((group for group in beds_match.groups() if group), "0")) if beds_match else None,
+    ]
+    if any(value is not None and value > 2_147_483_647 for value in numeric_values):
         return {
             "reply": "That number is outside the range I can search. Please try a smaller rent or bedroom count.",
             "properties": [],
         }
 
-    rent_limit = int(rent_match.group(1).replace(",", "")) if rent_match else None
-    rent_floor = int(min_rent.group(1).replace(",", "")) if min_rent else None
-    bedrooms = int(beds_match.group(1)) if beds_match else None
+    rent_limit = numeric_values[0]
+    rent_floor = numeric_values[1]
+    bedroom_count = int(next((group for group in beds_match.groups() if group), "0")) if beds_match else None
 
     property_type = None
     for aliases, value in (
@@ -71,7 +104,7 @@ def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
         for word in ("home", "house", "apartment", "flat", "bedsitter", "studio", "property", "properties", "listing", "rentals", "rent")
     )
 
-    if wants_homes or location or rent_limit or rent_floor or bedrooms or property_type:
+    if wants_homes or location or rent_limit or rent_floor or bedroom_count or property_type:
         query = (
             select(Property)
             .options(selectinload(Property.photos))
@@ -81,8 +114,13 @@ def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
             query = query.where(Property.monthly_rent <= rent_limit)
         if rent_floor is not None:
             query = query.where(Property.monthly_rent >= rent_floor)
-        if bedrooms is not None:
-            query = query.where(Property.bedrooms >= bedrooms)
+        if bedroom_count is not None:
+            if beds_match is min_beds:
+                query = query.where(Property.bedrooms >= bedroom_count)
+            elif beds_match is max_beds:
+                query = query.where(Property.bedrooms <= bedroom_count)
+            else:
+                query = query.where(Property.bedrooms == bedroom_count)
         if property_type:
             query = query.where(Property.property_type.ilike(f"%{property_type}%"))
         if location:
@@ -101,8 +139,18 @@ def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
                 )
             )
 
+        now = datetime.now(timezone.utc)
+        active_boost = case(
+            (
+                Property.is_featured.is_(True)
+                & Property.featured_until.is_not(None)
+                & (Property.featured_until > now),
+                1,
+            ),
+            else_=0,
+        )
         properties = db.scalars(
-            query.order_by(Property.is_featured.desc(), Property.created_at.desc()).limit(4)
+            query.order_by(active_boost.desc(), Property.created_at.desc()).limit(4)
         ).unique().all()
         if properties:
             return {

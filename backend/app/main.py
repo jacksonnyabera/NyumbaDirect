@@ -12,6 +12,7 @@ from app.routers.promotions import router as promotions_router
 from app.routers.payments import router as payments_router
 from app.routers import verification
 from app.routers import assistant
+from app.routers import favorites
 
 os.makedirs("uploads", exist_ok=True)
 app = FastAPI(
@@ -51,3 +52,4 @@ app.include_router(promotions_router)
 app.include_router(payments_router)
 app.include_router(verification.router)
 app.include_router(assistant.router)
+app.include_router(favorites.router)

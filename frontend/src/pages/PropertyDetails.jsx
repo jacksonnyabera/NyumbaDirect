@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
+import useFavorites from "../hooks/useFavorites";
 
 function PropertyDetails() {
   const { propertyId } = useParams();
@@ -11,18 +12,8 @@ function PropertyDetails() {
   const [error, setError] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [contacting, setContacting] = useState(false);
-
-  const [isFavorite, setIsFavorite] = useState(() => {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem("nyumbadirect_favorites") || "[]"
-      );
-
-      return saved.includes(Number(propertyId));
-    } catch {
-      return false;
-    }
-  });
+  const { favoriteIds, toggleFavorite, error: favoritesError } = useFavorites();
+  const isFavorite = favoriteIds.includes(Number(propertyId));
 
   useEffect(() => {
     const loadProperty = async () => {
@@ -60,29 +51,6 @@ function PropertyDetails() {
 
     loadProperty();
   }, [propertyId]);
-
-  const toggleFavorite = () => {
-    const id = Number(propertyId);
-
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem("nyumbadirect_favorites") || "[]"
-      );
-
-      const updated = saved.includes(id)
-        ? saved.filter((favoriteId) => favoriteId !== id)
-        : [...saved, id];
-
-      localStorage.setItem(
-        "nyumbadirect_favorites",
-        JSON.stringify(updated)
-      );
-
-      setIsFavorite(updated.includes(id));
-    } catch {
-      setIsFavorite((previous) => !previous);
-    }
-  };
 
   const handleContactLandlord = async () => {
     try {
@@ -280,7 +248,7 @@ function PropertyDetails() {
                 ? "details-favorite-active"
                 : ""
             }`}
-            onClick={toggleFavorite}
+            onClick={() => toggleFavorite(propertyId)}
           >
             <span>
               {isFavorite ? "♥" : "♡"}
@@ -292,6 +260,8 @@ function PropertyDetails() {
           </button>
 
         </div>
+
+        {favoritesError && <p role="alert" className="details-error">{favoritesError}</p>}
 
         {/* GALLERY */}
 

@@ -1,4 +1,6 @@
 import logging
+import re
+from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -35,9 +37,9 @@ def mpesa_stk_push(
     current_user: User = Depends(get_current_user),
 ):
     promotion = db.scalar(
-        select(PropertyPromotion).where(
-            PropertyPromotion.id == data.promotion_id
-        )
+        select(PropertyPromotion)
+        .where(PropertyPromotion.id == data.promotion_id)
+        .with_for_update()
     )
 
     if not promotion:
@@ -58,7 +60,13 @@ def mpesa_stk_push(
             detail="This promotion has already been paid for.",
         )
 
-    phone = data.phone_number.strip()
+    if promotion.payment_status == "PENDING" and promotion.checkout_request_id:
+        raise HTTPException(
+            status_code=409,
+            detail="This M-Pesa request is already awaiting confirmation. Check its payment status before trying again.",
+        )
+
+    phone = re.sub(r"[\s()-]", "", data.phone_number)
 
     if phone.startswith("0"):
         phone = "254" + phone[1:]
@@ -66,7 +74,7 @@ def mpesa_stk_push(
     if phone.startswith("+"):
         phone = phone[1:]
 
-    if not phone.startswith("254") or len(phone) != 12:
+    if not re.fullmatch(r"254[17]\d{8}", phone):
         raise HTTPException(
             status_code=400,
             detail="Enter a valid Kenyan phone number.",
@@ -86,10 +94,25 @@ def mpesa_stk_push(
         # Provider exceptions can contain credentials, request details, or
         # infrastructure information. Keep diagnostics in server logs only.
         logger.warning("M-Pesa STK initiation failed (%s)", type(exc).__name__)
+        promotion.payment_status = "FAILED"
+        promotion.result_description = "M-Pesa could not start the payment. Please try again."
+        db.commit()
         raise HTTPException(
             status_code=502,
             detail="Unable to initiate payment right now. Please try again shortly.",
         ) from exc
+
+    checkout_request_id = response.get("CheckoutRequestID")
+    response_code = str(response.get("ResponseCode", ""))
+    if response_code != "0" or not checkout_request_id:
+        logger.warning("M-Pesa did not accept STK request (code=%s)", response_code or "missing")
+        promotion.payment_status = "FAILED"
+        promotion.result_description = "M-Pesa did not accept the payment request. Please check the number and try again."
+        db.commit()
+        raise HTTPException(
+            status_code=502,
+            detail="M-Pesa could not start the payment. Check the number and try again.",
+        )
 
     promotion.phone_number = phone
 
@@ -97,9 +120,7 @@ def mpesa_stk_push(
         "MerchantRequestID"
     )
 
-    promotion.checkout_request_id = response.get(
-        "CheckoutRequestID"
-    )
+    promotion.checkout_request_id = checkout_request_id
 
     promotion.payment_status = "PENDING"
 
@@ -114,9 +135,7 @@ def mpesa_stk_push(
         "merchant_request_id": response.get(
             "MerchantRequestID"
         ),
-        "checkout_request_id": response.get(
-            "CheckoutRequestID"
-        ),
+        "checkout_request_id": checkout_request_id,
         "response_code": response.get(
             "ResponseCode"
         ),
@@ -141,7 +160,13 @@ def mpesa_callback(
             detail="Invalid payment callback credentials.",
         )
 
-    callback = payload.get("Body", {}).get("stkCallback", {})
+    body = payload.get("Body")
+    callback = body.get("stkCallback") if isinstance(body, dict) else None
+    if not isinstance(callback, dict):
+        return {
+            "ResultCode": 0,
+            "ResultDesc": "Callback received.",
+        }
 
     merchant_request_id = callback.get("MerchantRequestID")
     checkout_request_id = callback.get("CheckoutRequestID")
@@ -155,15 +180,26 @@ def mpesa_callback(
         }
 
     promotion = db.scalar(
-        select(PropertyPromotion).where(
-            PropertyPromotion.checkout_request_id == checkout_request_id
-        )
+        select(PropertyPromotion)
+        .where(PropertyPromotion.checkout_request_id == checkout_request_id)
+        .with_for_update()
     )
 
     if not promotion:
         return {
             "ResultCode": 0,
             "ResultDesc": "Promotion not found.",
+        }
+
+    if (
+        merchant_request_id
+        and promotion.merchant_request_id
+        and merchant_request_id != promotion.merchant_request_id
+    ):
+        logger.warning("M-Pesa callback merchant request ID did not match promotion %s", promotion.id)
+        return {
+            "ResultCode": 0,
+            "ResultDesc": "Callback received.",
         }
 
     # Prevent duplicate successful callbacks from extending the promotion
@@ -175,26 +211,29 @@ def mpesa_callback(
 
     promotion.merchant_request_id = merchant_request_id
     promotion.result_code = str(result_code)
-    promotion.result_description = result_description
+    promotion.result_description = (
+        str(result_description)[:255] if result_description is not None else None
+    )
 
     # Payment successful
-    if result_code == 0:
-        metadata_items = (
-            callback
-            .get("CallbackMetadata", {})
-            .get("Item", [])
-        )
+    if str(result_code) == "0":
+        metadata = callback.get("CallbackMetadata")
+        metadata_items = metadata.get("Item", []) if isinstance(metadata, dict) else []
+        if not isinstance(metadata_items, list):
+            metadata_items = []
 
         receipt_number = None
         phone_number = promotion.phone_number
         paid_amount = None
 
         for item in metadata_items:
+            if not isinstance(item, dict):
+                continue
             name = item.get("Name")
             value = item.get("Value")
 
-            if name == "MpesaReceiptNumber":
-                receipt_number = str(value)
+            if name == "MpesaReceiptNumber" and value:
+                receipt_number = str(value).strip()
 
             elif name == "PhoneNumber":
                 phone_number = str(value)
@@ -203,7 +242,12 @@ def mpesa_callback(
                 paid_amount = value
 
         # Verify the amount matches the promotion
-        if paid_amount is None or int(paid_amount) != int(promotion.amount):
+        try:
+            exact_paid_amount = Decimal(str(paid_amount))
+        except (InvalidOperation, TypeError, ValueError):
+            exact_paid_amount = None
+
+        if exact_paid_amount != promotion.amount:
             promotion.payment_status = "FAILED"
             promotion.result_description = (
                 "Payment amount does not match promotion amount."
@@ -224,6 +268,21 @@ def mpesa_callback(
 
             db.commit()
 
+            return {
+                "ResultCode": 0,
+                "ResultDesc": "Callback received.",
+            }
+
+        receipt_already_used = db.scalar(
+            select(PropertyPromotion.id).where(
+                PropertyPromotion.payment_reference == receipt_number,
+                PropertyPromotion.id != promotion.id,
+            )
+        )
+        if receipt_already_used:
+            promotion.payment_status = "FAILED"
+            promotion.result_description = "M-Pesa receipt number was already applied to another boost."
+            db.commit()
             return {
                 "ResultCode": 0,
                 "ResultDesc": "Callback received.",
@@ -304,6 +363,7 @@ def mpesa_payment_status(
     return {
         "promotion_id": promotion.id,
         "payment_status": promotion.payment_status,
+        "checkout_request_id": promotion.checkout_request_id,
         "payment_reference": promotion.payment_reference,
         "result_code": promotion.result_code,
         "result_description": promotion.result_description,

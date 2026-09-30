@@ -20,5 +20,8 @@ class PromotionResponse(BaseModel):
     starts_at: datetime | None
     expires_at: datetime | None
     created_at: datetime
+    phone_number: str | None = None
+    checkout_request_id: str | None = None
+    result_description: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

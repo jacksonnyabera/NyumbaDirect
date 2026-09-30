@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -54,7 +55,20 @@ def add_favorite(
     )
 
     db.add(favorite)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # A second tab or device may have saved the same property at once.
+        db.rollback()
+        existing = db.scalar(
+            select(Favorite).where(
+                Favorite.user_id == current_user.id,
+                Favorite.property_id == property_id,
+            )
+        )
+        if existing:
+            return existing
+        raise
     db.refresh(favorite)
 
     return favorite
@@ -70,11 +84,26 @@ def list_favorites(
 ):
     return db.scalars(
         select(Favorite)
+        .options(
+            selectinload(Favorite.property).options(
+                joinedload(Property.owner),
+                selectinload(Property.photos),
+            )
+        )
         .where(
             Favorite.user_id == current_user.id
         )
         .order_by(Favorite.created_at.desc())
     ).all()
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def clear_favorites(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db.execute(delete(Favorite).where(Favorite.user_id == current_user.id))
+    db.commit()
 
 
 @router.delete(

@@ -1,53 +1,38 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
-const FAVORITES_KEY = "nyumbadirect_favorites";
+import useFavorites from "../hooks/useFavorites";
 
 function SavedHomes() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { favoriteIds, toggleFavorite, clearFavorites, error: favoritesError } = useFavorites();
 
   const navigate = useNavigate();
 
-  const getFavorites = () => {
+  const loadSavedHomes = useCallback(async () => {
     try {
-      const saved =
-        localStorage.getItem(FAVORITES_KEY);
-
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const loadSavedHomes = async () => {
-    try {
-      setLoading(true);
-
-      const favoriteIds = getFavorites();
-
       if (!favoriteIds.length) {
         setProperties([]);
         return;
       }
 
-      const response = await api.get("/properties", {
-        params: { limit: 100 },
-      });
-
-      const data = response.data;
-
-      const allProperties =
-        Array.isArray(data)
-          ? data
-          : data.items || [];
-
-      const favoriteProperties =
-        allProperties.filter((property) =>
-          favoriteIds.includes(
-            Number(property.id)
-          )
+      let favoriteProperties;
+      if (localStorage.getItem("access_token")) {
+        const response = await api.get("/favorites");
+        favoriteProperties = (response.data || [])
+          .map((favorite) => favorite.property)
+          .filter(Boolean);
+      } else {
+        const response = await api.get("/properties", {
+          params: { limit: 100 },
+        });
+        const data = response.data;
+        const allProperties = Array.isArray(data) ? data : data.items || [];
+        favoriteProperties = allProperties.filter((property) =>
+          favoriteIds.includes(Number(property.id))
         );
+      }
 
       setProperties(favoriteProperties);
     } catch (error) {
@@ -59,35 +44,20 @@ function SavedHomes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [favoriteIds]);
 
   useEffect(() => {
     loadSavedHomes();
-  }, []);
+  }, [loadSavedHomes]);
 
-  const removeFavorite = (propertyId) => {
-    const currentFavorites = getFavorites();
-
-    const updatedFavorites =
-      currentFavorites.filter(
-        (id) => Number(id) !== Number(propertyId)
-      );
-
-    localStorage.setItem(
-      FAVORITES_KEY,
-      JSON.stringify(updatedFavorites)
-    );
-
+  const removeFavorite = async (propertyId) => {
+    if (!(await toggleFavorite(propertyId))) return;
     setProperties((currentProperties) =>
-      currentProperties.filter(
-        (property) =>
-          Number(property.id) !==
-          Number(propertyId)
-      )
+      currentProperties.filter((property) => Number(property.id) !== Number(propertyId))
     );
   };
 
-  const clearAllFavorites = () => {
+  const clearAllFavorites = async () => {
     const confirmed = window.confirm(
       "Remove all saved homes?"
     );
@@ -96,8 +66,7 @@ function SavedHomes() {
       return;
     }
 
-    localStorage.removeItem(FAVORITES_KEY);
-    setProperties([]);
+    if (await clearFavorites()) setProperties([]);
   };
 
   const getPhotoUrl = (property) => {
@@ -226,6 +195,8 @@ function SavedHomes() {
           </Link>
 
         </section>
+
+        {favoritesError && <p role="alert" className="saved-homes-error">{favoritesError}</p>}
 
         {loading ? (
           <div className="saved-homes-loading">

@@ -4002,6 +4002,11 @@ textarea {
   color: #475569;
 }
 
+.ai-help-property-card .ai-help-verified {
+  color: #047857;
+  font-weight: 700;
+}
+
 .ai-help-form {
   padding: 14px;
   background: white;

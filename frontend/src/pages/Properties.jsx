@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
+import useFavorites from "../hooks/useFavorites";
 
 function Properties() {
   const [searchParams] = useSearchParams();
@@ -18,15 +19,7 @@ function Properties() {
   const [maxRent, setMaxRent] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
-  const [favorites, setFavorites] = useState(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem("nyumbadirect_favorites") || "[]"
-      );
-    } catch {
-      return [];
-    }
-  });
+  const { favoriteIds: favorites, toggleFavorite, error: favoritesError } = useFavorites();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -105,21 +98,6 @@ function Properties() {
     } finally {
       setLoadingMore(false);
     }
-  };
-
-  const toggleFavorite = (propertyId) => {
-    setFavorites((previous) => {
-      const updated = previous.includes(propertyId)
-        ? previous.filter((id) => id !== propertyId)
-        : [...previous, propertyId];
-
-      localStorage.setItem(
-        "nyumbadirect_favorites",
-        JSON.stringify(updated)
-      );
-
-      return updated;
-    });
   };
 
   const filteredProperties = properties;
@@ -472,6 +450,12 @@ function Properties() {
               Try again
             </button>
 
+          </div>
+        )}
+
+        {favoritesError && (
+          <div className="marketplace-status error-state" role="alert">
+            <p>{favoritesError}</p>
           </div>
         )}
 

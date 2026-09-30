@@ -30,6 +30,8 @@ function BoostProperty() {
   const [property, setProperty] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [promotionId, setPromotionId] = useState(null);
+  const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
@@ -48,11 +50,33 @@ function BoostProperty() {
       try {
         setLoading(true);
 
-        const response = await api.get(
-          `/properties/${propertyId}`
-        );
+        const [propertyResponse, promotionsResponse] = await Promise.all([
+          api.get(`/properties/${propertyId}`),
+          api.get("/promotions/my", {
+            params: { property_id: Number(propertyId), limit: 20 },
+          }),
+        ]);
 
-        setProperty(response.data);
+        setProperty(propertyResponse.data);
+        const pendingPromotion = (promotionsResponse.data || []).find(
+          (promotion) =>
+            Number(promotion.property_id) === Number(propertyId) &&
+            promotion.payment_status === "PENDING"
+        );
+        if (pendingPromotion) {
+          setPromotionId(pendingPromotion.id);
+          setCheckoutRequestId(pendingPromotion.checkout_request_id || "");
+          setPaymentStatus("PENDING");
+          setPhoneNumber(pendingPromotion.phone_number || "");
+          setSelectedPackage(
+            PACKAGES.find((item) => item.key === pendingPromotion.package) || null
+          );
+          setMessage(
+            pendingPromotion.checkout_request_id
+              ? "An M-Pesa request is already awaiting confirmation. Check its status here; do not start another payment."
+              : "Your boost request is saved. Enter the payment number and continue to send the M-Pesa prompt."
+          );
+        }
       } catch (err) {
         console.error(err);
 
@@ -76,7 +100,7 @@ function BoostProperty() {
   }, [navigate, propertyId]);
 
   const normalizePhone = (value) => {
-    const clean = value.replace(/\s+/g, "").trim();
+    const clean = value.replace(/[\s()-]/g, "").trim();
 
     if (clean.startsWith("+254")) {
       return clean.slice(1);
@@ -112,13 +136,15 @@ function BoostProperty() {
     const normalizedPhone =
       normalizePhone(phoneNumber);
 
-    if (!/^2547\d{8}$/.test(normalizedPhone)) {
+    if (!/^254[17]\d{8}$/.test(normalizedPhone)) {
       setError(
-        "Enter a valid Kenyan M-Pesa number, for example 0712345678."
+        "Enter a valid Kenyan M-Pesa number, for example 0712345678 or 0112345678."
       );
       return;
     }
 
+    let currentPromotionId = promotionId;
+    let currentCheckoutRequestId = checkoutRequestId;
     try {
       setPaying(true);
 
@@ -126,14 +152,23 @@ function BoostProperty() {
        * Create the promotion ONLY after
        * the landlord chooses a package.
        */
-      const promotionResponse =
-        await api.post("/promotions", {
+      if (!currentPromotionId) {
+        const promotionResponse = await api.post("/promotions", {
           property_id: Number(propertyId),
           package: selectedPackage.key,
         });
+        currentPromotionId = promotionResponse.data.id;
+        currentCheckoutRequestId = promotionResponse.data.checkout_request_id || "";
+        setPromotionId(currentPromotionId);
+        setCheckoutRequestId(currentCheckoutRequestId);
+      }
 
-      const promotion =
-        promotionResponse.data;
+      if (currentCheckoutRequestId) {
+        setPaymentStatus("PENDING");
+        setMessage("This M-Pesa request is awaiting confirmation. Check your phone; this page will check for an update for up to one minute.");
+        await waitForPayment(currentPromotionId);
+        return;
+      }
 
       /*
        * Start M-Pesa payment.
@@ -142,7 +177,7 @@ function BoostProperty() {
         await api.post(
           "/payments/mpesa/stk-push",
           {
-            promotion_id: promotion.id,
+            promotion_id: currentPromotionId,
             phone_number: normalizedPhone,
           }
         );
@@ -152,29 +187,13 @@ function BoostProperty() {
           "STK Push sent. Check your M-Pesa phone and enter your PIN."
       );
 
-      setPaymentStatus("PENDING");
-      for (let attempt = 0; attempt < 12; attempt += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        try {
-          const statusResponse = await api.get(
-            `/payments/mpesa/status/${promotion.id}`
-          );
-          const status = String(statusResponse.data?.payment_status || "").toUpperCase();
-          if (status === "PAID") {
-            setPaymentStatus("PAID");
-            setMessage("Payment confirmed. Your property boost is now active.");
-            return;
-          }
-          if (status === "FAILED") {
-            setPaymentStatus("FAILED");
-            setError(statusResponse.data?.result_description || "The payment was not completed. You can try again.");
-            return;
-          }
-        } catch (statusError) {
-          console.error("Unable to check boost payment status:", statusError);
-        }
+      const checkoutId = paymentResponse.data?.checkout_request_id;
+      if (!checkoutId) {
+        throw new Error("M-Pesa did not return a payment request ID.");
       }
-      setMessage("Your payment is still awaiting confirmation. Check your M-Pesa phone or review the status from your dashboard.");
+      setCheckoutRequestId(checkoutId);
+      setPaymentStatus("PENDING");
+      await waitForPayment(currentPromotionId);
     } catch (err) {
       console.error(err);
 
@@ -185,6 +204,23 @@ function BoostProperty() {
         return;
       }
 
+      if (currentPromotionId && err.response?.status === 409) {
+        try {
+          const statusResponse = await api.get(
+            `/payments/mpesa/status/${currentPromotionId}`
+          );
+          setCheckoutRequestId(statusResponse.data?.checkout_request_id || "");
+          setPaymentStatus(statusResponse.data?.payment_status || "PENDING");
+          setMessage("This payment request is already being processed. Check its status before retrying.");
+        } catch {
+          setMessage("This payment request may already be underway. Check your M-Pesa phone before trying again.");
+        }
+      } else if (currentPromotionId) {
+        setPromotionId(currentPromotionId);
+        setPaymentStatus("FAILED");
+        setCheckoutRequestId("");
+      }
+
       setError(
         err.response?.data?.detail ||
           "Unable to start the boost payment. Please try again."
@@ -193,6 +229,74 @@ function BoostProperty() {
       setPaying(false);
     }
   };
+
+  const fetchPaymentStatus = async (id) => {
+    const response = await api.get(`/payments/mpesa/status/${id}`);
+    const status = String(response.data?.payment_status || "").toUpperCase();
+    setPaymentStatus(status);
+
+    if (status === "PAID") {
+      setMessage("Payment confirmed. Your property boost is now active.");
+      setError("");
+    } else if (status === "FAILED") {
+      setError(response.data?.result_description || "The payment was not completed. You can try again.");
+      setMessage("");
+      setCheckoutRequestId("");
+    }
+    return status;
+  };
+
+  const waitForPayment = async (id) => {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      try {
+        const status = await fetchPaymentStatus(id);
+        if (status === "PAID" || status === "FAILED") return;
+      } catch (statusError) {
+        console.error("Unable to check boost payment status:", statusError);
+      }
+    }
+    setMessage("Payment is still awaiting confirmation. Check your M-Pesa phone, then use the status button below. A second payment prompt will not be sent while this request is pending.");
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!promotionId || paying) return;
+    setPaying(true);
+    setError("");
+    try {
+      const status = await fetchPaymentStatus(promotionId);
+      if (status === "PENDING") {
+        setMessage("M-Pesa has not confirmed this request yet. Check your phone and try again shortly.");
+      }
+    } catch (statusError) {
+      if (statusError.response?.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("user");
+        navigate("/login");
+        return;
+      }
+      setError("Unable to check payment status right now. Please try again.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const hasPendingCheckout =
+    paymentStatus === "PENDING" && Boolean(checkoutRequestId);
+  const paymentButtonText = paying
+    ? paymentStatus === "PENDING"
+      ? "Waiting for M-Pesa confirmation..."
+      : "Sending STK Push..."
+    : paymentStatus === "PAID"
+      ? "Boost is active"
+      : hasPendingCheckout
+        ? "Payment awaiting confirmation"
+        : paymentStatus === "PENDING"
+          ? "Continue payment"
+          : selectedPackage
+            ? `Boost for KSh ${selectedPackage.amount.toLocaleString()}`
+            : "Choose a package to continue";
 
   if (loading) {
     return (
@@ -328,7 +432,10 @@ function BoostProperty() {
                   setMessage("");
                   setError("");
                   setPaymentStatus("");
+                  setPromotionId(null);
+                  setCheckoutRequestId("");
                 }}
+                disabled={paying || paymentStatus === "PENDING" || paymentStatus === "PAID"}
               >
 
                 {item.key === "14_DAYS" && (
@@ -396,22 +503,29 @@ function BoostProperty() {
                 event.target.value
               )
             }
-            disabled={paying}
+            disabled={paying || hasPendingCheckout || paymentStatus === "PAID"}
           />
 
           <button
             type="submit"
             className="boost-pay-button"
             disabled={
-              paying || !selectedPackage
+              paying || !selectedPackage || paymentStatus === "PAID" || hasPendingCheckout
             }
           >
-            {paying
-              ? paymentStatus === "PENDING" ? "Waiting for M-Pesa confirmation..." : "Sending STK Push..."
-              : selectedPackage
-                ? `Boost for KSh ${selectedPackage.amount.toLocaleString()}`
-                : "Choose a package to continue"}
+            {paymentButtonText}
           </button>
+
+          {hasPendingCheckout && (
+            <button
+              type="button"
+              className="boost-secondary-button"
+              onClick={checkPaymentStatus}
+              disabled={paying}
+            >
+              {paying ? "Checking payment..." : "Check payment status"}
+            </button>
+          )}
 
           <p className="boost-secure-note">
             Your property is only marked as

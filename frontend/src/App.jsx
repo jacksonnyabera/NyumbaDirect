@@ -1383,9 +1383,10 @@ function AIHelpAssistant() {
                     {item.properties.map((property) => (
                       <Link key={property.id} to={`/properties/${property.id}`} className="ai-help-property-card">
                         <strong>{property.title}</strong>
-                        <span>{[property.area, property.town].filter(Boolean).join(", ")}</span>
+                        <span>{[property.area, property.town, property.county].filter(Boolean).join(", ")}</span>
                         <span>KSh {Number(property.monthly_rent).toLocaleString()} / month</span>
                         <small>{property.bedrooms} bedroom{property.bedrooms === 1 ? "" : "s"} · View details →</small>
+                        {property.is_verified && <small className="ai-help-verified">✓ Verified listing</small>}
                       </Link>
                     ))}
                   </div>
