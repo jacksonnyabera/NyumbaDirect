@@ -8,7 +8,6 @@ function Login() {
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [needsVerification, setNeedsVerification] = useState(false);
 
   const navigate = useNavigate();
 
@@ -73,9 +72,11 @@ function Login() {
           error.response.data?.detail ||
           "The login information has an invalid format."
         );
-      } else if (error.response?.status === 403 && error.response?.data?.detail === "ACCOUNT_NOT_VERIFIED") {
-        setNeedsVerification(true);
-        setError("Please verify your account before signing in.");
+      } else if (error.response?.status === 403) {
+        setError(
+          error.response.data?.detail ||
+          "Your account cannot sign in right now."
+        );
       } else if (error.response?.status === 401) {
         setError(
           error.response.data?.detail ||
