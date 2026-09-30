@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
-import { getBedroomDisplay } from "../utils/propertyDisplay";
+import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
 
 function PropertyDetails() {
   const { propertyId } = useParams();
@@ -291,6 +291,12 @@ function PropertyDetails() {
             )}
 
             <div className="details-image-badges">
+
+              {isPropertyBoostActive(property) && (
+                <span className="details-featured-badge">
+                  ★ Featured listing
+                </span>
+              )}
 
               {property.is_verified && (
                 <span className="details-verified-badge">

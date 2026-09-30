@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
-import { getBedroomDisplay } from "../utils/propertyDisplay";
+import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -686,7 +686,7 @@ function Dashboard() {
                           </span>
                         )}
 
-                        {property.is_featured && (
+                        {isPropertyBoostActive(property) && (
                           <span className="dashboard-property-featured">
                             🚀 Featured
                           </span>

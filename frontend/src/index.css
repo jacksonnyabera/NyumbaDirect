@@ -4105,6 +4105,18 @@ textarea {
   font-weight: 800;
 }
 
+.dashboard-property-featured {
+  position: absolute;
+  top: 46px;
+  right: 12px;
+  padding: 6px 9px;
+  border-radius: 20px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .public-info-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4573,6 +4585,7 @@ textarea {
 }
 
 .verified-badge,
+.featured-badge,
 .unavailable-badge {
   padding: 6px 10px;
   border-radius: 999px;
@@ -4584,6 +4597,12 @@ textarea {
 .verified-badge {
   background: white;
   color: #166534;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+
+.featured-badge {
+  background: #fff7ed;
+  color: #9a3412;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
 }
 
@@ -5095,6 +5114,7 @@ textarea {
 }
 
 .details-verified-badge,
+.details-featured-badge,
 .details-available-badge {
   padding: 8px 12px;
   border-radius: 999px;
@@ -5106,6 +5126,10 @@ textarea {
 
 .details-verified-badge {
   color: #166534;
+}
+
+.details-featured-badge {
+  color: #9a3412;
 }
 
 .details-available-badge {

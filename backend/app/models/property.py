@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -22,6 +23,9 @@ if TYPE_CHECKING:
 
 class Property(Base):
     __tablename__ = "properties"
+    __table_args__ = (
+        Index("ix_properties_available_created", "is_available", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,

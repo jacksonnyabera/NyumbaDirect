@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
-import { getBedroomDisplay } from "../utils/propertyDisplay";
+import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
 
 function Properties() {
   const [searchParams] = useSearchParams();
@@ -534,6 +534,12 @@ function Properties() {
                       <div className="image-overlay" />
 
                       <div className="card-badges">
+
+                        {isPropertyBoostActive(property) && (
+                          <span className="featured-badge">
+                            ★ Featured
+                          </span>
+                        )}
 
                         {property.is_verified && (
                           <span className="verified-badge">

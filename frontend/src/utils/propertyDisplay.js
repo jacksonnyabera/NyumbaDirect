@@ -23,3 +23,9 @@ export function getBedroomDisplay(property) {
   const label = bedrooms === 1 ? "Bedroom" : "Bedrooms";
   return { value: String(bedrooms), label, summary: `${bedrooms} ${label.toLowerCase()}` };
 }
+
+export function isPropertyBoostActive(property) {
+  if (!property?.is_featured || !property.featured_until) return false;
+  const expiresAt = Date.parse(property.featured_until);
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}

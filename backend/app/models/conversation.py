@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -8,6 +8,18 @@ from app.database import Base
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    __table_args__ = (
+        Index(
+            "ix_conversations_house_hunter_updated",
+            "house_hunter_id",
+            "updated_at",
+        ),
+        Index(
+            "ix_conversations_landlord_updated",
+            "landlord_id",
+            "updated_at",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         Integer,

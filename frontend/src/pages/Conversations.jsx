@@ -18,7 +18,7 @@ function Conversations() {
     let hasLoaded = false;
 
     const loadConversations = async (initial = false) => {
-      if (!active || inFlight) return;
+      if (!active || inFlight || document.visibilityState !== "visible") return;
 
       const token = localStorage.getItem("access_token");
 
@@ -86,11 +86,21 @@ function Conversations() {
     };
 
     loadConversations(true);
-    const interval = window.setInterval(() => loadConversations(false), 15000);
+    const interval = window.setInterval(
+      () => loadConversations(!hasLoaded),
+      15000
+    );
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        loadConversations(!hasLoaded);
+      }
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       active = false;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [navigate]);
 

@@ -311,6 +311,24 @@ def update_property(
 
     update_data = data.model_dump(exclude_unset=True)
 
+    if "bedrooms" in update_data or "property_type" in update_data:
+        property_type = str(
+            update_data.get("property_type", property_obj.property_type)
+        ).casefold()
+        bedrooms = update_data.get("bedrooms", property_obj.bedrooms)
+        is_studio_or_bedsitter = any(
+            kind in property_type
+            for kind in ("studio", "bedsitter", "bachelor")
+        )
+        if bedrooms == 0 and not is_studio_or_bedsitter:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Enter at least one bedroom, or choose Studio/Bedsitter "
+                    "for a zero-bedroom home."
+                ),
+            )
+
     # Prevent users from changing protected fields
     update_data.pop("owner_id", None)
     update_data.pop("is_verified", None)

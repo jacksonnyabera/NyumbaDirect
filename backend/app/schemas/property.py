@@ -229,6 +229,35 @@ class PropertyUpdate(BaseModel):
 
     is_available: bool | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_required_fields(cls, values):
+        if not isinstance(values, dict):
+            return values
+
+        required_fields = {
+            "title",
+            "description",
+            "property_type",
+            "bedrooms",
+            "bathrooms",
+            "monthly_rent",
+            "county",
+            "town",
+            "area",
+            "is_available",
+        }
+        null_fields = sorted(
+            field
+            for field in required_fields
+            if field in values and values[field] is None
+        )
+        if null_fields:
+            raise ValueError(
+                f"These listing fields cannot be cleared: {', '.join(null_fields)}."
+            )
+        return values
+
 
 class PropertyListResponse(BaseModel):
     items: list[PropertyResponse]

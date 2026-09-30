@@ -264,7 +264,29 @@ function BoostProperty() {
     setRequiresSupport(Boolean(response.data?.requires_support));
 
     if (status === "PAID") {
-      setMessage("Payment confirmed. Your property boost is now active.");
+      const startsAt = response.data?.starts_at
+        ? new Date(response.data.starts_at)
+        : null;
+      const expiresAt = response.data?.expires_at
+        ? new Date(response.data.expires_at)
+        : null;
+      const startsLater = startsAt &&
+        !Number.isNaN(startsAt.getTime()) &&
+        startsAt.getTime() > Date.now();
+      const expiryDate = expiresAt && !Number.isNaN(expiresAt.getTime())
+        ? expiresAt.toLocaleDateString()
+        : null;
+
+      if (startsLater) {
+        const startDate = startsAt.toLocaleDateString();
+        setMessage(
+          `Payment confirmed. Your next boost starts ${startDate}${expiryDate ? ` and runs through ${expiryDate}` : ""}.`
+        );
+      } else {
+        setMessage(
+          `Payment confirmed. Your boost is active${expiryDate ? ` through ${expiryDate}` : ""}.`
+        );
+      }
       setError("");
     } else if (status === "FAILED") {
       setError(response.data?.result_description || "The payment was not completed. You can try again.");

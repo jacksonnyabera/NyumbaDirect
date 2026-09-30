@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.property import Property
+from app.models.conversation import Conversation
 from app.models.review import Review
 from app.models.user import User
 from app.schemas.review import ReviewCreate, ReviewResponse
@@ -45,6 +47,35 @@ def create_review(
             detail="You cannot review your own property.",
         )
 
+    if str(current_user.role).upper() != "HOUSE_HUNTER":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only house hunters can leave listing feedback.",
+        )
+
+    contacted_owner = db.scalar(
+        select(Conversation.id).where(
+            Conversation.property_id == property_id,
+            Conversation.house_hunter_id == current_user.id,
+            Conversation.landlord_id == property_obj.owner_id,
+        )
+    )
+    if not contacted_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Start a conversation with the landlord through NyumbaDirect "
+                "before leaving listing feedback."
+            ),
+        )
+
+    comment = review_data.comment.strip()
+    if len(comment) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Feedback must contain at least 3 non-space characters.",
+        )
+
     existing = db.scalar(
         select(Review).where(
             Review.user_id == current_user.id,
@@ -62,7 +93,7 @@ def create_review(
         user_id=current_user.id,
         property_id=property_id,
         rating=review_data.rating,
-        comment=review_data.comment,
+        comment=comment,
     )
 
     db.add(review)
@@ -129,4 +160,11 @@ def delete_review(
         )
 
     db.delete(review)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already reviewed this property.",
+        ) from exc

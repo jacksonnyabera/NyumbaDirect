@@ -435,25 +435,25 @@ def send_message(
     if ai_message:
         db.refresh(ai_message)
 
-    notification_user = (
+    other_user = (
         landlord
         if current_user.id == conversation.house_hunter_id
         else db.scalar(select(User).where(User.id == conversation.house_hunter_id))
     )
-    if notification_user and notification_user.email and property_obj:
+    if other_user and other_user.email and property_obj:
         if current_user.id == conversation.house_hunter_id:
             background_tasks.add_task(
                 NotificationService.send_property_inquiry_email,
-                    to_email=notification_user.email,
-                    house_hunter_name=current_user.full_name,
-                    property_title=property_obj.title,
+                to_email=other_user.email,
+                house_hunter_name=current_user.full_name,
+                property_title=property_obj.title,
             )
         else:
             background_tasks.add_task(
                 NotificationService.send_conversation_reply_email,
-                    to_email=notification_user.email,
-                    sender_name=current_user.full_name,
-                    property_title=property_obj.title,
+                to_email=other_user.email,
+                sender_name=current_user.full_name,
+                property_title=property_obj.title,
             )
 
     # ---------------------------------------------------------
@@ -465,19 +465,19 @@ def send_message(
         "ai_reply": _serialize_message(ai_message) if ai_message else None,
         "contact": {
             "name": (
-                landlord.full_name
-                if landlord
-                else "Landlord / Property Manager"
+                other_user.full_name
+                if other_user
+                else "Conversation participant"
             ),
-                "phone_number": (
-                landlord.phone_number
-                if landlord
+            "phone_number": (
+                other_user.phone_number
+                if other_user
                 else None
             ),
             "role": (
-                landlord.role
-                if landlord
-                else "LANDLORD"
+                other_user.role
+                if other_user
+                else "HOUSE_HUNTER"
             ),
         },
     }

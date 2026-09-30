@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.config import settings
 from app.dependencies import get_current_user
+from app.models.property import Property
 from app.models.property_promotion import PropertyPromotion
 from app.models.user import User
 from app.services.mpesa import (
@@ -341,10 +342,6 @@ def mpesa_callback(
         if phone_number:
             promotion.phone_number = phone_number
 
-        now = datetime.now(timezone.utc)
-
-        promotion.starts_at = now
-
         days = {
             "7_DAYS": 7,
             "14_DAYS": 14,
@@ -364,9 +361,28 @@ def mpesa_callback(
                 "ResultDesc": "Callback received.",
             }
 
-        promotion.expires_at = now + timedelta(days=days)
+        # Lock the property row so concurrent paid renewals cannot overwrite
+        # one another's expiry and so unused paid time rolls forward.
+        property_obj = db.scalar(
+            select(Property)
+            .where(Property.id == promotion.property_id)
+            .with_for_update()
+        )
+        now = datetime.now(timezone.utc)
+        starts_at = now
+        if (
+            property_obj
+            and property_obj.is_featured
+            and property_obj.featured_until
+        ):
+            current_expiry = property_obj.featured_until
+            if current_expiry.tzinfo is None:
+                current_expiry = current_expiry.replace(tzinfo=timezone.utc)
+            if current_expiry > starts_at:
+                starts_at = current_expiry
 
-        property_obj = promotion.property
+        promotion.starts_at = starts_at
+        promotion.expires_at = starts_at + timedelta(days=days)
 
         if property_obj:
             property_obj.is_featured = True

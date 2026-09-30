@@ -159,14 +159,16 @@ function Messages() {
   useEffect(() => {
     let active = true;
     let polling = false;
+    let hasLoadedInitially = false;
     const refresh = async (initial = false) => {
-      if (!active || polling) return;
+      if (!active || polling || document.visibilityState !== "visible") return;
       polling = true;
       try {
         const isCurrent = () =>
           active && activeConversationId.current === conversationId;
         const loaded = await loadMessages(initial, isCurrent);
         if (isCurrent() && loaded) await markMessagesAsRead();
+        if (initial && loaded && isCurrent()) hasLoadedInitially = true;
       } finally {
         polling = false;
       }
@@ -181,11 +183,21 @@ function Messages() {
     setContact(null);
     setAiAvailable(false);
     refresh(true);
-    const interval = setInterval(() => refresh(false), 5000);
+    const interval = window.setInterval(
+      () => refresh(!hasLoadedInitially),
+      5000
+    );
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        refresh(!hasLoadedInitially);
+      }
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       active = false;
-      clearInterval(interval);
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
       latestMessageId.current = 0;
     };
   }, [conversationId]);
