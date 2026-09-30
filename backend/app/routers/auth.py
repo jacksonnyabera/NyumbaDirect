@@ -1,10 +1,6 @@
 from datetime import datetime, timedelta, timezone
-import secrets
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, EmailStr, Field
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -61,12 +57,6 @@ class VerificationRequest(BaseModel):
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
     method: str = Field(pattern=r"^(EMAIL|SMS)$")
-
-
-class GoogleSignInRequest(BaseModel):
-    credential: str = Field(min_length=100, max_length=5000)
-    phone_number: str | None = Field(default=None, min_length=9, max_length=30)
-    role: str = "HOUSE_HUNTER"
 
 
 def _deliver_verification(user: User, method: str, code: str) -> bool:
@@ -233,82 +223,6 @@ def resend_verification(data: ResendVerificationRequest, db: Session = Depends(g
             db.commit()
             _deliver_verification(user, data.method, code)
     return {"message": "If this account is awaiting verification, a code has been sent when the requested channel is available."}
-
-
-@router.post("/google", response_model=TokenResponse)
-def google_sign_in(data: GoogleSignInRequest, db: Session = Depends(get_db)):
-    if not settings.google_client_id:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Google sign-in is not configured yet.",
-        )
-    try:
-        claims = id_token.verify_oauth2_token(
-            data.credential,
-            google_requests.Request(),
-            audience=settings.google_client_id,
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Google sign-in could not be verified. Please try again.",
-        ) from exc
-
-    email = str(claims.get("email", "")).strip().lower()
-    google_subject = claims.get("sub")
-    email_verified = claims.get("email_verified") in (True, "true")
-    if not email or not google_subject or not email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Google must confirm the email address before you can sign in.",
-        )
-
-    user = db.scalar(select(User).where(User.email == email))
-    if user is None:
-        if not data.phone_number:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="GOOGLE_PHONE_REQUIRED",
-            )
-        try:
-            phone_number = normalize_kenyan_phone(data.phone_number)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        existing_phone = db.scalar(select(User).where(User.phone_number == phone_number))
-        if existing_phone:
-            raise HTTPException(status_code=409, detail="Phone number is already registered.")
-        role = data.role.strip().upper()
-        if role not in ALLOWED_REGISTRATION_ROLES:
-            raise HTTPException(status_code=400, detail="Invalid registration role.")
-        full_name = str(claims.get("name") or email.split("@", 1)[0]).strip()[:150]
-        user = User(
-            full_name=full_name or "NyumbaDirect user",
-            email=email,
-            phone_number=phone_number,
-            password_hash=hash_password(secrets.token_urlsafe(32)),
-            role=role,
-            is_active=True,
-            is_verified=True,
-        )
-        db.add(user)
-    elif not user.is_active:
-        raise HTTPException(status_code=403, detail="Your account is inactive.")
-    else:
-        # Google has confirmed control of this email; this also completes
-        # verification for an existing password-based account.
-        user.is_verified = True
-        challenge = db.scalar(
-            select(AccountVerification).where(AccountVerification.user_id == user.id)
-        )
-        if challenge and not challenge.consumed_at:
-            challenge.consumed_at = datetime.now(timezone.utc)
-
-    db.commit()
-    db.refresh(user)
-    return TokenResponse(
-        access_token=create_access_token(data={"sub": str(user.id), "role": user.role}),
-        token_type="bearer",
-    )
 
 
 @router.get(
