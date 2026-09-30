@@ -70,12 +70,6 @@ def get_current_user(
             detail="Your account is inactive.",
         )
 
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="ACCOUNT_NOT_VERIFIED",
-        )
-
     return user
 
 
