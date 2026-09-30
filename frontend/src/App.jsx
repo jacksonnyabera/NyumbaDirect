@@ -154,7 +154,7 @@ function Home() {
                     const imageUrl = photo?.image_url
                       ? (photo.image_url.startsWith("http") ? photo.image_url : `${API_BASE_URL}${photo.image_url}`)
                       : null;
-                    return imageUrl ? <img src={imageUrl} alt={featuredProperty.title} loading="lazy" /> : <span className="home-image-fallback">Photo not provided</span>;
+                    return imageUrl ? <img src={imageUrl} alt={featuredProperty.title} loading="lazy" /> : <span className="home-image-fallback">No photos added yet</span>;
                   })()}
                   {featuredProperty.is_verified && <div className="verified-badge">✓ Verified</div>}
                 </div>

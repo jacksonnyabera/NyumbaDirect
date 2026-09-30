@@ -32,6 +32,7 @@ function BoostProperty() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [promotionId, setPromotionId] = useState(null);
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
+  const [requiresSupport, setRequiresSupport] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
@@ -67,12 +68,17 @@ function BoostProperty() {
           setPromotionId(pendingPromotion.id);
           setCheckoutRequestId(pendingPromotion.checkout_request_id || "");
           setPaymentStatus("PENDING");
+          const supportRequired = Boolean(
+            pendingPromotion.phone_number && !pendingPromotion.checkout_request_id
+          );
+          setRequiresSupport(supportRequired);
           setPhoneNumber(pendingPromotion.phone_number || "");
           setSelectedPackage(
             PACKAGES.find((item) => item.key === pendingPromotion.package) || null
           );
-          setMessage(
-            pendingPromotion.checkout_request_id
+          setMessage(supportRequired
+            ? pendingPromotion.result_description || "We could not confirm whether M-Pesa received your request. Check your phone and contact support before trying another payment."
+            : pendingPromotion.checkout_request_id
               ? "An M-Pesa request is already awaiting confirmation. Check its status here; do not start another payment."
               : "Your boost request is saved. Enter the payment number and continue to send the M-Pesa prompt."
           );
@@ -189,9 +195,16 @@ function BoostProperty() {
 
       const checkoutId = paymentResponse.data?.checkout_request_id;
       if (!checkoutId) {
+        if (paymentResponse.data?.requires_support) {
+          setRequiresSupport(true);
+          setPaymentStatus("PENDING");
+          setMessage(paymentResponse.data.message || "We could not confirm whether M-Pesa received your request. Check your phone and contact support before trying another payment.");
+          return;
+        }
         throw new Error("M-Pesa did not return a payment request ID.");
       }
       setCheckoutRequestId(checkoutId);
+      setRequiresSupport(false);
       setPaymentStatus("PENDING");
       await waitForPayment(currentPromotionId);
     } catch (err) {
@@ -204,27 +217,41 @@ function BoostProperty() {
         return;
       }
 
-      if (currentPromotionId && err.response?.status === 409) {
+      let reconciledStatus = "";
+      if (currentPromotionId) {
         try {
           const statusResponse = await api.get(
             `/payments/mpesa/status/${currentPromotionId}`
           );
+          reconciledStatus = String(statusResponse.data?.payment_status || "PENDING").toUpperCase();
           setCheckoutRequestId(statusResponse.data?.checkout_request_id || "");
-          setPaymentStatus(statusResponse.data?.payment_status || "PENDING");
-          setMessage("This payment request is already being processed. Check its status before retrying.");
+          setPaymentStatus(reconciledStatus);
+          const supportRequired = Boolean(statusResponse.data?.requires_support);
+          setRequiresSupport(supportRequired);
+          if (reconciledStatus === "PENDING") {
+            setMessage(supportRequired
+              ? "M-Pesa may have received the request. Check your phone and contact support before trying again."
+              : "This boost is still awaiting payment. You can continue when no M-Pesa request has been sent."
+            );
+          }
         } catch {
-          setMessage("This payment request may already be underway. Check your M-Pesa phone before trying again.");
+          // If the status service is also unreachable, keep the form locked
+          // until the customer can confirm whether the STK request arrived.
+          reconciledStatus = "PENDING";
+          setPaymentStatus("PENDING");
+          setRequiresSupport(true);
+          setMessage("We could not confirm whether M-Pesa received the request. Check your phone and contact support before trying another payment.");
         }
-      } else if (currentPromotionId) {
-        setPromotionId(currentPromotionId);
-        setPaymentStatus("FAILED");
-        setCheckoutRequestId("");
       }
 
-      setError(
-        err.response?.data?.detail ||
-          "Unable to start the boost payment. Please try again."
-      );
+      if (reconciledStatus === "PENDING") {
+        setError("");
+      } else {
+        setError(
+          err.response?.data?.detail ||
+            "Unable to start the boost payment. Please try again."
+        );
+      }
     } finally {
       setPaying(false);
     }
@@ -234,6 +261,7 @@ function BoostProperty() {
     const response = await api.get(`/payments/mpesa/status/${id}`);
     const status = String(response.data?.payment_status || "").toUpperCase();
     setPaymentStatus(status);
+    setRequiresSupport(Boolean(response.data?.requires_support));
 
     if (status === "PAID") {
       setMessage("Payment confirmed. Your property boost is now active.");
@@ -242,6 +270,7 @@ function BoostProperty() {
       setError(response.data?.result_description || "The payment was not completed. You can try again.");
       setMessage("");
       setCheckoutRequestId("");
+      setRequiresSupport(false);
     }
     return status;
   };
@@ -266,7 +295,10 @@ function BoostProperty() {
     try {
       const status = await fetchPaymentStatus(promotionId);
       if (status === "PENDING") {
-        setMessage("M-Pesa has not confirmed this request yet. Check your phone and try again shortly.");
+        setMessage(requiresSupport
+          ? "M-Pesa has not confirmed this request. Check your phone and contact support before starting another payment."
+          : "M-Pesa has not confirmed this request yet. Check your phone and try again shortly."
+        );
       }
     } catch (statusError) {
       if (statusError.response?.status === 401) {
@@ -282,16 +314,18 @@ function BoostProperty() {
     }
   };
 
-  const hasPendingCheckout =
-    paymentStatus === "PENDING" && Boolean(checkoutRequestId);
+  const hasLockedPendingPayment = paymentStatus === "PENDING" &&
+    (Boolean(checkoutRequestId) || requiresSupport);
   const paymentButtonText = paying
     ? paymentStatus === "PENDING"
       ? "Waiting for M-Pesa confirmation..."
       : "Sending STK Push..."
     : paymentStatus === "PAID"
       ? "Boost is active"
-      : hasPendingCheckout
-        ? "Payment awaiting confirmation"
+      : requiresSupport
+        ? "Payment needs a status check"
+        : hasLockedPendingPayment
+          ? "Payment awaiting confirmation"
         : paymentStatus === "PENDING"
           ? "Continue payment"
           : selectedPackage
@@ -434,6 +468,7 @@ function BoostProperty() {
                   setPaymentStatus("");
                   setPromotionId(null);
                   setCheckoutRequestId("");
+                  setRequiresSupport(false);
                 }}
                 disabled={paying || paymentStatus === "PENDING" || paymentStatus === "PAID"}
               >
@@ -503,20 +538,20 @@ function BoostProperty() {
                 event.target.value
               )
             }
-            disabled={paying || hasPendingCheckout || paymentStatus === "PAID"}
+            disabled={paying || hasLockedPendingPayment || paymentStatus === "PAID"}
           />
 
           <button
             type="submit"
             className="boost-pay-button"
             disabled={
-              paying || !selectedPackage || paymentStatus === "PAID" || hasPendingCheckout
+              paying || !selectedPackage || paymentStatus === "PAID" || hasLockedPendingPayment
             }
           >
             {paymentButtonText}
           </button>
 
-          {hasPendingCheckout && (
+          {hasLockedPendingPayment && (
             <button
               type="button"
               className="boost-secondary-button"
@@ -525,6 +560,16 @@ function BoostProperty() {
             >
               {paying ? "Checking payment..." : "Check payment status"}
             </button>
+          )}
+
+          {requiresSupport && (
+            <div className="boost-payment-support" role="alert">
+              <strong>Check before paying again</strong>
+              <p>We could not confirm whether M-Pesa received the request. Check your phone, and contact support if you did not receive a prompt. We have blocked another prompt to help prevent a duplicate charge.</p>
+              <a href={`mailto:supportnyumbadirect@gmail.com?subject=Boost%20payment%20status%20-%20${promotionId}`}>
+                Contact NyumbaDirect support
+              </a>
+            </div>
           )}
 
           <p className="boost-secure-note">
@@ -856,6 +901,26 @@ function BoostProperty() {
         .boost-secure-note {
           margin: 12px 0 0;
           font-size: 12px;
+        }
+
+        .boost-payment-support {
+          margin-top: 16px;
+          padding: 14px 16px;
+          border: 1px solid #fcd34d;
+          border-radius: 12px;
+          background: #fffbeb;
+          color: #78350f;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+
+        .boost-payment-support p {
+          margin: 6px 0 10px;
+        }
+
+        .boost-payment-support a {
+          color: #0f766e;
+          font-weight: 700;
         }
 
         .boost-loading,

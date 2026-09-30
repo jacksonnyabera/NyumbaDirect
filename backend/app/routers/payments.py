@@ -14,7 +14,10 @@ from app.config import settings
 from app.dependencies import get_current_user
 from app.models.property_promotion import PropertyPromotion
 from app.models.user import User
-from app.services.mpesa import initiate_stk_push
+from app.services.mpesa import (
+    MpesaInitiationUncertainError,
+    initiate_stk_push,
+)
 
 
 router = APIRouter(
@@ -60,10 +63,12 @@ def mpesa_stk_push(
             detail="This promotion has already been paid for.",
         )
 
-    if promotion.payment_status == "PENDING" and promotion.checkout_request_id:
+    if promotion.payment_status == "PENDING" and (
+        promotion.checkout_request_id or promotion.phone_number
+    ):
         raise HTTPException(
             status_code=409,
-            detail="This M-Pesa request is already awaiting confirmation. Check its payment status before trying again.",
+            detail="An M-Pesa request has already been sent or may still be processing. Check its status before trying again.",
         )
 
     phone = re.sub(r"[\s()-]", "", data.phone_number)
@@ -80,6 +85,13 @@ def mpesa_stk_push(
             detail="Enter a valid Kenyan phone number.",
         )
 
+    # Save an initiation reservation before contacting Safaricom. This releases
+    # the row lock while the network request runs and blocks parallel prompts.
+    promotion.phone_number = phone
+    promotion.payment_status = "PENDING"
+    promotion.result_description = "M-Pesa request is being initiated."
+    db.commit()
+
     try:
         response = initiate_stk_push(
             phone_number=phone,
@@ -90,6 +102,23 @@ def mpesa_stk_push(
             ),
         )
 
+    except MpesaInitiationUncertainError as exc:
+        logger.warning(
+            "M-Pesa STK outcome is uncertain for promotion %s",
+            promotion.id,
+        )
+        promotion.result_description = (
+            "We could not confirm whether M-Pesa received this request. "
+            "Check your phone and contact support before trying another payment."
+        )
+        db.commit()
+        return {
+            "message": promotion.result_description,
+            "checkout_request_id": None,
+            "promotion_id": promotion.id,
+            "payment_status": promotion.payment_status,
+            "requires_support": True,
+        }
     except Exception as exc:
         # Provider exceptions can contain credentials, request details, or
         # infrastructure information. Keep diagnostics in server logs only.
@@ -104,7 +133,25 @@ def mpesa_stk_push(
 
     checkout_request_id = response.get("CheckoutRequestID")
     response_code = str(response.get("ResponseCode", ""))
-    if response_code != "0" or not checkout_request_id:
+    if not response_code or not checkout_request_id:
+        if response_code in {"", "0"}:
+            promotion.checkout_request_id = checkout_request_id
+            promotion.merchant_request_id = response.get("MerchantRequestID")
+            promotion.result_description = (
+                "M-Pesa may have received this request but returned an incomplete response. "
+                "Check your phone and contact support before trying another payment."
+            )
+            db.commit()
+            return {
+                "message": promotion.result_description,
+                "checkout_request_id": checkout_request_id,
+                "promotion_id": promotion.id,
+                "payment_status": promotion.payment_status,
+                "requires_support": not bool(checkout_request_id),
+            }
+
+    if response_code != "0":
+
         logger.warning("M-Pesa did not accept STK request (code=%s)", response_code or "missing")
         promotion.payment_status = "FAILED"
         promotion.result_description = "M-Pesa did not accept the payment request. Please check the number and try again."
@@ -364,6 +411,11 @@ def mpesa_payment_status(
         "promotion_id": promotion.id,
         "payment_status": promotion.payment_status,
         "checkout_request_id": promotion.checkout_request_id,
+        "requires_support": (
+            promotion.payment_status == "PENDING"
+            and bool(promotion.phone_number)
+            and not promotion.checkout_request_id
+        ),
         "payment_reference": promotion.payment_reference,
         "result_code": promotion.result_code,
         "result_description": promotion.result_description,

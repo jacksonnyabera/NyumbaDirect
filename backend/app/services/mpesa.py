@@ -7,6 +7,10 @@ import requests
 from app.config import settings
 
 
+class MpesaInitiationUncertainError(RuntimeError):
+    """The STK request may have reached Safaricom, but no response arrived."""
+
+
 def get_mpesa_base_url() -> str:
     if settings.mpesa_environment.lower() == "production":
         return "https://api.safaricom.co.ke"
@@ -87,16 +91,34 @@ def initiate_stk_push(
         "TransactionDesc": transaction_description,
     }
 
-    response = requests.post(
-        url,
-        json=payload,
-        headers={
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json",
-        },
-        timeout=30,
-    )
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            timeout=30,
+        )
+    except requests.RequestException as exc:
+        # A transport failure does not prove Safaricom rejected the request.
+        # The customer may still receive an STK prompt, so callers must not retry blindly.
+        response = getattr(exc, "response", None)
+        if response is not None and 400 <= response.status_code < 500:
+            raise
+        raise MpesaInitiationUncertainError from exc
+
+    if response.status_code >= 500:
+        raise MpesaInitiationUncertainError(
+            "Safaricom returned a server error after the request was submitted."
+        )
 
     response.raise_for_status()
 
-    return response.json()
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise MpesaInitiationUncertainError(
+            "Safaricom returned an unreadable response after the request was submitted."
+        ) from exc

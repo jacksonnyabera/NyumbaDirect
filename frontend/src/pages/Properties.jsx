@@ -526,7 +526,7 @@ function Properties() {
                         <div className="property-image-placeholder">
                           <span>🏡</span>
                           <small>
-                            Property photo unavailable
+                            No photos added yet
                           </small>
                         </div>
                       )}

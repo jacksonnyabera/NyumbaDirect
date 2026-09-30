@@ -282,10 +282,10 @@ function PropertyDetails() {
               <div className="details-image-placeholder">
                 <span>🏡</span>
                 <strong>
-                  Property photo unavailable
+                  No photos added yet
                 </strong>
                 <small>
-                  Contact the owner for more information.
+                  Contact the owner to ask a question or arrange a viewing.
                 </small>
               </div>
             )}
