@@ -10,7 +10,6 @@ Provide these through the hosting provider's secret/environment settings. Do not
 - `JWT_SECRET_KEY`
 - `PUBLIC_API_URL` (the public HTTPS API origin used in account verification links)
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and optionally `SMTP_FROM` for verification, password reset, and conversation notices
-- `GOOGLE_CLIENT_ID` for verifying Google sign-in ID tokens. Use the web OAuth client ID; no Google client secret is used by this flow.
 - `VERIFICATION_CODE_TTL_MINUTES`, `VERIFICATION_CODE_MAX_ATTEMPTS`, and `VERIFICATION_RESEND_COOLDOWN_SECONDS` to tune signup-code expiry and resend limits (defaults: 10 minutes, 5 attempts, and 60 seconds)
 - `SMS_PROVIDER=africas_talking`, `SMS_API_KEY`, `SMS_USERNAME`, and `SMS_ENVIRONMENT=sandbox` or `production` for SMS signup codes. Set `SMS_SENDER_ID` only after Africa's Talking has approved the sender ID for your account.
 - `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY`, `MPESA_SHORTCODE`, `MPESA_ENVIRONMENT`, `MPESA_CALLBACK_URL`, and `MPESA_CALLBACK_SECRET` for paid listing boosts
@@ -21,4 +20,3 @@ For a multi-worker deployment, set `DATABASE_POOL_SIZE`, `DATABASE_MAX_OVERFLOW`
 
 Signup supports a one-time code by email or Kenyan mobile SMS. Unverified accounts cannot sign in or use authenticated API routes. If the selected delivery channel is not configured or delivery fails, the account remains pending and the user can request another code after delivery is configured. Africa's Talking credentials and a production-approved sender ID are required for real SMS delivery. Password reset requests return the same public response whether or not the account exists.
 
-Google sign-in accepts an ID token only after backend verification against `GOOGLE_CLIENT_ID`. A Google-verified email may sign in or create an account without an email OTP. First-time Google signups must provide a Kenyan mobile number. Configure the same web client ID as `VITE_GOOGLE_CLIENT_ID` in the frontend hosting environment. SMTP is still needed for password resets and other outbound email notifications.
