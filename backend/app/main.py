@@ -44,6 +44,7 @@ app.mount(
     name="uploads",
 )
 
+
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(properties.router)
@@ -55,3 +56,9 @@ app.include_router(verification.router)
 app.include_router(assistant.router)
 app.include_router(favorites.router)
 app.include_router(reviews.router)
+@app.get("/")
+def root():
+    return {
+        "message": "NyumbaDirect API is running",
+        "status": "ok",
+    }
