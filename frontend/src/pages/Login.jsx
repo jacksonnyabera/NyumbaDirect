@@ -8,16 +8,9 @@ function Login() {
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   const navigate = useNavigate();
-
-  const finishSignIn = async (accessToken) => {
-    localStorage.setItem("access_token", accessToken);
-    const meResponse = await api.get("/auth/me");
-    if (meResponse.data?.id) localStorage.setItem("user_id", String(meResponse.data.id));
-    localStorage.setItem("nyumbadirect_remember_login", "true");
-    navigate("/dashboard");
-  };
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -35,6 +28,7 @@ function Login() {
     }
 
     setError("");
+    setNeedsVerification(false);
     setLoading(true);
 
     try {
@@ -58,36 +52,47 @@ function Login() {
       }
 
       const meResponse = await api.get("/auth/me");
+      const user = meResponse.data;
 
-      if (meResponse.data?.id) {
-        localStorage.setItem("user_id", String(meResponse.data.id));
+      if (user?.id) {
+        localStorage.setItem("user_id", String(user.id));
+      }
+
+      // Check whether the account has been verified.
+      if (user && user.is_verified === false) {
+        setNeedsVerification(true);
+        setError(
+          "Your account has not been verified yet. Please verify your account before continuing."
+        );
+        return;
       }
 
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
 
+      const detail = error.response?.data?.detail;
+
       if (error.response?.status === 422) {
         setError(
-          error.response.data?.detail ||
-          "The login information has an invalid format."
+          detail || "The login information has an invalid format."
         );
       } else if (error.response?.status === 403) {
         setError(
-          error.response.data?.detail ||
-          "Your account cannot sign in right now."
+          detail || "Your account cannot sign in right now."
         );
       } else if (error.response?.status === 401) {
         setError(
-          error.response.data?.detail ||
-          "Invalid email or password."
+          detail || "Invalid email or password."
         );
-      } else if (error.response?.data?.detail) {
-        setError(error.response.data.detail);
+      } else if (detail) {
+        setError(detail);
       } else if (error.message) {
         setError(error.message);
       } else {
-        setError("Unable to connect to the server. Please try again.");
+        setError(
+          "Unable to connect to the server. Please try again."
+        );
       }
 
       localStorage.removeItem("access_token");
@@ -112,7 +117,9 @@ function Login() {
 
         <div className="auth-intro">
           <h1>Welcome back</h1>
-          <p>Sign in to continue to your NyumbaDirect account.</p>
+          <p>
+            Sign in to continue to your NyumbaDirect account.
+          </p>
         </div>
 
         {error && (
@@ -122,7 +129,13 @@ function Login() {
         )}
 
         {needsVerification && (
-          <Link className="auth-button" to="/verify-account" state={{ email: email.trim().toLowerCase() }}>
+          <Link
+            className="auth-button"
+            to="/verify-account"
+            state={{
+              email: email.trim().toLowerCase(),
+            }}
+          >
             Verify your account
           </Link>
         )}
@@ -130,13 +143,17 @@ function Login() {
         <form className="auth-form" onSubmit={handleLogin}>
           <div className="auth-field">
             <label htmlFor="email">Email</label>
+
             <input
               id="email"
               name="email"
               type="email"
               value={email}
               placeholder="you@example.com"
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setNeedsVerification(false);
+              }}
               autoComplete="email"
               required
             />
@@ -144,11 +161,18 @@ function Login() {
 
           <div className="auth-field">
             <div className="auth-row">
-              <label htmlFor="password">Password</label>
-              <Link to="/forgot-password" className="auth-link-muted">
+              <label htmlFor="password">
+                Password
+              </label>
+
+              <Link
+                to="/forgot-password"
+                className="auth-link-muted"
+              >
                 Forgot password?
               </Link>
             </div>
+
             <input
               id="password"
               name="password"
@@ -166,21 +190,31 @@ function Login() {
               <input
                 type="checkbox"
                 checked={remember}
-                onChange={(event) => setRemember(event.target.checked)}
+                onChange={(event) =>
+                  setRemember(event.target.checked)
+                }
               />
+
               <span>Keep me signed in</span>
             </label>
           </div>
 
-          <button className="auth-button" type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login to NyumbaDirect"}
+          <button
+            className="auth-button"
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? "Logging in..."
+              : "Login to NyumbaDirect"}
           </button>
         </form>
 
-
-
         <p className="auth-switch">
-          Don't have an account? <Link to="/register">Create one</Link>
+          Don't have an account?{" "}
+          <Link to="/register">
+            Create one
+          </Link>
         </p>
 
         <Link className="auth-back" to="/">
