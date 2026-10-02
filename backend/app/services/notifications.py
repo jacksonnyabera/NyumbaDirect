@@ -14,13 +14,20 @@ class NotificationService:
     def send_email(to_email: str, subject: str, message: str) -> bool:
         smtp_host = (os.getenv("SMTP_HOST") or "").strip()
         smtp_port = int((os.getenv("SMTP_PORT") or "587").strip())
-        smtp_user = (os.getenv("SMTP_USER") or "").strip()
+        smtp_user = (
+            os.getenv("SMTP_USER")
+            or os.getenv("SMTP_USERNAME")
+            or ""
+        ).strip()
         smtp_password = (os.getenv("SMTP_PASSWORD") or "").strip()
 
         # Gmail/Google Workspace SMTP should normally send from the authenticated
         # account unless SMTP_FROM is a verified send-as alias.
         smtp_from = (
-            os.getenv("SMTP_FROM") or smtp_user or "no-reply@nyumbadirect.co.ke"
+            os.getenv("SMTP_FROM")
+            or os.getenv("SMTP_FROM_EMAIL")
+            or smtp_user
+            or "no-reply@nyumbadirect.co.ke"
         ).strip()
 
         if not smtp_host or not smtp_user or not smtp_password:

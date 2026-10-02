@@ -2,5 +2,14 @@
 .env
 *.env
 
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+venv/
+.venv/
+backend/venv/
+
 # JetBrains IDE
 .idea/

@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    public_api_url: str = ""
     database_pool_size: int = 5
     database_max_overflow: int = 10
     database_pool_timeout: int = 30
@@ -24,11 +26,26 @@ class Settings(BaseSettings):
     sms_username: str = "sandbox"
     sms_sender_id: str = ""
     sms_environment: str = "sandbox"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_user: str = Field(
+        default="",
+        validation_alias=AliasChoices("smtp_user", "smtp_username", "SMTP_USER", "SMTP_USERNAME"),
+    )
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_from_name: str = "NyumbaDirect"
+    smtp_from: str = Field(
+        default="",
+        validation_alias=AliasChoices("smtp_from", "smtp_from_email", "SMTP_FROM", "SMTP_FROM_EMAIL"),
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     mpesa_consumer_key: str = ""
