@@ -4,10 +4,26 @@
   box-sizing: border-box;
 }
 
+:root {
+  --nd-slate-950: #0f172a;
+  --nd-slate-900: #111827;
+  --nd-slate-700: #334155;
+  --nd-slate-500: #64748b;
+  --nd-slate-200: #e2e8f0;
+  --nd-slate-100: #f1f5f9;
+  --nd-sky-500: #2563eb;
+  --nd-sky-600: #1d4ed8;
+  --nd-teal-600: #0f766e;
+  --nd-teal-700: #115e59;
+  --nd-shadow-soft: 0 20px 45px rgba(15, 23, 42, 0.08);
+  --nd-shadow-strong: 0 28px 60px rgba(15, 23, 42, 0.12);
+}
+
 body {
   font-family: Inter, Arial, sans-serif;
-  background: #f8fafc;
-  color: #0f172a;
+  background: linear-gradient(180deg, #f8fbff 0%, #f8fafc 18%, #f4f7fb 100%);
+  color: var(--nd-slate-950);
+  line-height: 1.5;
 }
 
 .brand-logo {
@@ -3184,11 +3200,18 @@ textarea {
   min-height: 650px;
   margin: 0 auto;
   padding: 80px 24px;
+  position: relative;
 
   display: grid;
   grid-template-columns: 1fr 0.9fr;
   align-items: center;
   gap: 70px;
+
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(15, 118, 110, 0.08), transparent 30%),
+    linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(255, 255, 255, 0.96));
+  border-radius: 0 0 32px 32px;
 }
 
 .hero-content {
@@ -3286,11 +3309,13 @@ textarea {
 .search-btn {
   background: #2563eb;
   color: white;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
 }
 
 .search-btn:hover {
   background: #1d4ed8;
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 16px 26px rgba(37, 99, 235, 0.28);
 }
 
 .secondary-btn {
@@ -3344,9 +3369,7 @@ textarea {
   border: 1px solid #e5e7eb;
   border-radius: 20px;
 
-  box-shadow:
-    0 25px 60px rgba(15, 23, 42, 0.12),
-    0 4px 12px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--nd-shadow-strong);
 
   transform: rotate(1deg);
   transition: 0.3s ease;
@@ -3511,6 +3534,7 @@ textarea {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.03);
 
   transition: 0.25s ease;
 }
@@ -3518,8 +3542,7 @@ textarea {
 .feature-card:hover {
   transform: translateY(-4px);
 
-  box-shadow:
-    0 15px 35px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
 }
 
 .feature-icon {
@@ -3573,6 +3596,7 @@ textarea {
 
   background: #111827;
   color: white;
+  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.2);
 }
 
 .home-cta .eyebrow {
@@ -3679,7 +3703,13 @@ textarea {
   background: white;
   border: 1px solid #dbeafe;
   border-radius: 20px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--nd-shadow-soft);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.city-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
 }
 
 .city-card-dark {
@@ -3759,6 +3789,13 @@ textarea {
   background: #f8fafc;
   border: 1px solid #e5e7eb;
   border-radius: 18px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.03);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.process-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
 }
 
 .process-number {
@@ -3792,7 +3829,7 @@ textarea {
 .site-footer {
   margin-top: 80px;
 
-  background: #f8fafc;
+  background: linear-gradient(180deg, #f8fafc 0%, #f2f7fc 100%);
   border-top: 1px solid #e5e7eb;
 }
 
