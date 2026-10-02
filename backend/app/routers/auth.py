@@ -364,12 +364,6 @@ def login_user(
             detail="Your account is inactive.",
         )
 
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your account must be verified before you can sign in.",
-        )
-
     access_token = create_access_token(
         data={
             "sub": str(user.id),
