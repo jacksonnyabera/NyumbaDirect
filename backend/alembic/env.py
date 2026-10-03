@@ -14,6 +14,7 @@ from app.models import (
     Favorite,
     Review,
     LandlordVerification,
+    PropertyView,
 )
 
 

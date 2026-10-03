@@ -6,6 +6,7 @@ import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDispl
 function Dashboard() {
   const [user, setUser] = useState(null);
   const [properties, setProperties] = useState([]);
+  const [propertyEngagement, setPropertyEngagement] = useState({});
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -61,6 +62,7 @@ function Dashboard() {
 
         if (isLandlord) {
           requests.push(api.get("/properties/mine"));
+          requests.push(api.get("/properties/mine/engagement"));
         }
 
         const responses = await Promise.allSettled(requests);
@@ -82,6 +84,12 @@ function Dashboard() {
         if (isLandlord && responses[1]?.status === "fulfilled") {
           const data = responses[1].value.data;
           setProperties(data.items || data || []);
+        }
+        if (isLandlord && responses[2]?.status === "fulfilled") {
+          const metrics = responses[2].value.data || [];
+          setPropertyEngagement(
+            Object.fromEntries(metrics.map((item) => [item.property_id, item]))
+          );
         }
       } catch (err) {
         console.error("Unable to load dashboard:", err);
@@ -737,6 +745,27 @@ function Dashboard() {
                             </span>
                           </div>
                         </div>
+
+                        <div
+                          className="dashboard-property-engagement"
+                          aria-label={`Engagement for ${property.title}`}
+                        >
+                          <div>
+                            <strong>{propertyEngagement[property.id]?.unique_views ?? 0}</strong>
+                            <span>Unique views</span>
+                          </div>
+                          <div>
+                            <strong>{propertyEngagement[property.id]?.saves ?? 0}</strong>
+                            <span>Saved homes</span>
+                          </div>
+                        </div>
+
+                        <Link
+                          to={`/properties/${property.id}#property-reviews`}
+                          className="dashboard-property-reviews-link"
+                        >
+                          View house-hunter reviews
+                        </Link>
 
                         <div className="dashboard-property-actions">
                           <Link

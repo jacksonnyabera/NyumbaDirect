@@ -13,6 +13,10 @@ from app.security import decode_access_token
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/auth/login",
 )
+optional_oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/auth/login",
+    auto_error=False,
+)
 
 
 def authentication_error(detail: str):
@@ -71,6 +75,27 @@ def get_current_user(
         )
 
     return user
+
+
+def get_optional_current_user(
+    token: str | None = Depends(optional_oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if not token:
+        return None
+
+    payload = decode_access_token(token)
+    user_id = payload.get("sub") if payload else None
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        return None
+
+    if user_id <= 0:
+        return None
+
+    user = db.scalar(select(User).where(User.id == user_id))
+    return user if user and user.is_active else None
 
 
 def require_role(*allowed_roles: str) -> Callable:

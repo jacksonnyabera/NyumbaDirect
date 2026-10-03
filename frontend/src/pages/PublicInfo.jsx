@@ -37,6 +37,7 @@ function PublicInfo() {
             <p>This policy explains how NyumbaDirect handles information when people search for homes, list a property, create an account or message another user.</p>
             <h2>Information used</h2>
             <p>Account information includes your name, email address, phone number and account type. Listing information can include property details, location, rent, photos and verification status. Messages are stored with the related property conversation. If you buy a listing promotion, payment status, phone number and the M-Pesa receipt reference may be recorded.</p>
+            <p>To show landlords unique property-view totals, we store a random browser identifier locally and save only its hash with the viewed listing. Dashboard totals do not identify individual visitors.</p>
             <h2>How information is used</h2>
             <p>We use this information to operate accounts, show property listings, connect house hunters and property owners, support verification, deliver service notices and process paid property promotions.</p>
             <h2>What other users can see</h2>

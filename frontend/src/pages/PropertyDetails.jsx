@@ -4,6 +4,22 @@ import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
 import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
 
+function getOrCreateVisitorId() {
+  const storageKey = "nyumbadirect_visitor_id";
+  const existingId = localStorage.getItem(storageKey);
+  if (existingId) return existingId;
+
+  const visitorId = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+        const randomValue = Math.floor(Math.random() * 16);
+        const value = character === "x" ? randomValue : (randomValue & 3) | 8;
+        return value.toString(16);
+      });
+  localStorage.setItem(storageKey, visitorId);
+  return visitorId;
+}
+
 function PropertyDetails() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
@@ -13,22 +29,45 @@ function PropertyDetails() {
   const [error, setError] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [contacting, setContacting] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [viewer, setViewer] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewMessage, setReviewMessage] = useState("");
   const { favoriteIds, toggleFavorite, error: favoritesError } = useFavorites();
   const isFavorite = favoriteIds.includes(Number(propertyId));
 
   useEffect(() => {
+    let active = true;
     const loadProperty = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response = await api.get(
-          `/properties/${propertyId}`
-        );
+        const token = localStorage.getItem("access_token");
+        const [response, reviewsResponse, viewerResponse] = await Promise.all([
+          api.get(`/properties/${propertyId}`),
+          api.get(`/reviews/${propertyId}`).catch(() => ({ data: [] })),
+          token ? api.get("/auth/me").catch(() => null) : Promise.resolve(null),
+        ]);
 
         const data = response.data;
 
+        if (!active) return;
         setProperty(data);
+        setReviews(reviewsResponse.data || []);
+        setViewer(viewerResponse?.data || null);
+
+        if (data.is_available) {
+          try {
+            const visitorId = getOrCreateVisitorId();
+            api.post(`/properties/${propertyId}/view`, { visitor_id: visitorId }).catch(() => {});
+          } catch {
+            // Viewing the listing should not depend on local analytics storage.
+          }
+        }
 
         if (data.photos?.length > 0) {
           const primaryPhoto =
@@ -46,12 +85,19 @@ function PropertyDetails() {
             "Failed to load property."
         );
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadProperty();
+    return () => { active = false; };
   }, [propertyId]);
+
+  useEffect(() => {
+    if (!loading && window.location.hash === "#property-reviews") {
+      document.getElementById("property-reviews")?.scrollIntoView({ block: "start" });
+    }
+  }, [loading]);
 
   const handleContactLandlord = async () => {
     try {
@@ -93,6 +139,35 @@ function PropertyDetails() {
       );
     } finally {
       setContacting(false);
+    }
+  };
+
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+    setReviewError("");
+    setReviewMessage("");
+
+    const comment = reviewComment.trim();
+    if (comment.length < 3) {
+      setReviewError("Please write at least 3 characters about your experience.");
+      return;
+    }
+
+    try {
+      setReviewSaving(true);
+      const response = await api.post(`/reviews/${property.id}`, {
+        rating: Number(reviewRating),
+        comment,
+      });
+      setReviews((current) => [response.data, ...current]);
+      setReviewComment("");
+      setReviewMessage("Your review has been posted.");
+    } catch (err) {
+      setReviewError(
+        err.response?.data?.detail || "Unable to submit your review right now. Please try again."
+      );
+    } finally {
+      setReviewSaving(false);
     }
   };
 
@@ -654,6 +729,99 @@ function PropertyDetails() {
 
               </div>
 
+            </section>
+
+            <section
+              className="details-content-section details-reviews-section"
+              id="property-reviews"
+              aria-labelledby="property-reviews-title"
+            >
+              <div className="details-reviews-heading">
+                <div>
+                  <span className="details-review-kicker">HOUSE-HUNTER FEEDBACK</span>
+                  <h2 id="property-reviews-title">Property reviews</h2>
+                </div>
+                <span className="details-review-count">
+                  {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+                </span>
+              </div>
+
+              {reviews.length > 0 ? (
+                <div className="details-review-list">
+                  {reviews.map((review) => (
+                    <article className="details-review-item" key={review.id}>
+                      <div className="details-review-item-heading">
+                        <div>
+                          <strong>House hunter</strong>
+                          <span className="details-review-stars" aria-label={`${review.rating} out of 5 stars`}>
+                            {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                          </span>
+                        </div>
+                        <time dateTime={review.created_at}>
+                          {new Date(review.created_at).toLocaleDateString("en-KE", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </time>
+                      </div>
+                      <p>{review.comment}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="details-review-empty">No reviews yet. House hunters can share feedback after contacting the landlord.</p>
+              )}
+
+              {viewer?.role?.toUpperCase() === "HOUSE_HUNTER" &&
+              Number(viewer.id) !== Number(property.owner_id) ? (
+                <form className="details-review-form" onSubmit={handleReviewSubmit}>
+                  <h3>Share your experience</h3>
+                  <p>Reviews are for house hunters who have started a conversation with this landlord. One review is allowed per account.</p>
+
+                  <label htmlFor="property-review-rating">Your rating</label>
+                  <select
+                    id="property-review-rating"
+                    value={reviewRating}
+                    onChange={(event) => setReviewRating(Number(event.target.value))}
+                  >
+                    <option value={5}>5 - Excellent</option>
+                    <option value={4}>4 - Good</option>
+                    <option value={3}>3 - Okay</option>
+                    <option value={2}>2 - Poor</option>
+                    <option value={1}>1 - Very poor</option>
+                  </select>
+
+                  <label htmlFor="property-review-comment">Your review</label>
+                  <textarea
+                    id="property-review-comment"
+                    value={reviewComment}
+                    onChange={(event) => setReviewComment(event.target.value)}
+                    minLength={3}
+                    maxLength={2000}
+                    rows={4}
+                    placeholder="Share helpful details about your experience with this property."
+                    required
+                  />
+
+                  {reviewError && <p className="details-review-error" role="alert">{reviewError}</p>}
+                  {reviewMessage && <p className="details-review-success" role="status">{reviewMessage}</p>}
+
+                  <button type="submit" disabled={reviewSaving}>
+                    {reviewSaving ? "Posting review..." : "Post review"}
+                  </button>
+                </form>
+              ) : viewer ? (
+                <p className="details-review-guidance">
+                  {Number(viewer.id) === Number(property.owner_id)
+                    ? "Property owners cannot review their own listing."
+                    : "Only house hunters can leave a property review."}
+                </p>
+              ) : (
+                <p className="details-review-guidance">
+                  <Link to="/login">Sign in as a house hunter</Link> to leave a review after contacting the landlord.
+                </p>
+              )}
             </section>
 
           </main>

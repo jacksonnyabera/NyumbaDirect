@@ -1,22 +1,32 @@
 from datetime import datetime, timezone
+from hashlib import sha256
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import case, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
 from app.dependencies import (
     get_current_user,
+    get_optional_current_user,
     require_landlord_or_manager,
 )
+from app.models.favorite import Favorite
 from app.models.property import Property
 from app.models.property_photo import PropertyPhoto
+from app.models.property_view import PropertyView
 from app.models.user import User
 from app.schemas.property import (
     PropertyCreate,
     PropertyListResponse,
     PropertyResponse,
     PropertyUpdate,
+)
+from app.schemas.property_view import (
+    PropertyEngagementResponse,
+    PropertyViewCreate,
+    PropertyViewResponse,
 )
 
 router = APIRouter(
@@ -254,6 +264,52 @@ def list_properties(
     )
 
 
+@router.get(
+    "/mine/engagement",
+    response_model=list[PropertyEngagementResponse],
+)
+def get_my_property_engagement(
+    current_user: User = Depends(require_landlord_or_manager),
+    db: Session = Depends(get_db),
+):
+    view_counts = (
+        select(
+            PropertyView.property_id,
+            func.count(PropertyView.id).label("unique_views"),
+        )
+        .group_by(PropertyView.property_id)
+        .subquery()
+    )
+    save_counts = (
+        select(
+            Favorite.property_id,
+            func.count(Favorite.id).label("saves"),
+        )
+        .group_by(Favorite.property_id)
+        .subquery()
+    )
+    rows = db.execute(
+        select(
+            Property.id.label("property_id"),
+            func.coalesce(view_counts.c.unique_views, 0).label("unique_views"),
+            func.coalesce(save_counts.c.saves, 0).label("saves"),
+        )
+        .outerjoin(view_counts, view_counts.c.property_id == Property.id)
+        .outerjoin(save_counts, save_counts.c.property_id == Property.id)
+        .where(Property.owner_id == current_user.id)
+        .order_by(Property.created_at.desc())
+    ).all()
+
+    return [
+        PropertyEngagementResponse(
+            property_id=row.property_id,
+            unique_views=row.unique_views,
+            saves=row.saves,
+        )
+        for row in rows
+    ]
+
+
 # ============================================================
 # GET SINGLE PROPERTY
 # ============================================================
@@ -282,6 +338,59 @@ def get_property(
         )
 
     return property_obj
+
+
+@router.post(
+    "/{property_id}/view",
+    response_model=PropertyViewResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def record_property_view(
+    property_id: int,
+    data: PropertyViewCreate,
+    current_user: User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
+    property_obj = db.get(Property, property_id)
+    if not property_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found.",
+        )
+
+    if not property_obj.is_available or (
+        current_user and property_obj.owner_id == current_user.id
+    ):
+        return PropertyViewResponse(recorded=False)
+
+    identity = (
+        f"user:{current_user.id}"
+        if current_user
+        else f"visitor:{data.visitor_id}"
+    )
+    viewer_hash = sha256(identity.encode("utf-8")).hexdigest()
+    existing = db.scalar(
+        select(PropertyView.id).where(
+            PropertyView.property_id == property_id,
+            PropertyView.viewer_hash == viewer_hash,
+        )
+    )
+    if existing:
+        return PropertyViewResponse(recorded=False)
+
+    db.add(
+        PropertyView(
+            property_id=property_id,
+            viewer_hash=viewer_hash,
+        )
+    )
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return PropertyViewResponse(recorded=False)
+
+    return PropertyViewResponse(recorded=True)
 
 
 # ============================================================

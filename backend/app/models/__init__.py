@@ -8,6 +8,7 @@ from app.models.review import Review
 from app.models.landlord_verification import LandlordVerification
 from app.models.property_promotion import PropertyPromotion
 from app.models.account_verification import AccountVerification
+from app.models.property_view import PropertyView
 
 __all__ = [
     "User",
@@ -20,4 +21,5 @@ __all__ = [
     "LandlordVerification",
     "PropertyPromotion",
     "AccountVerification",
+    "PropertyView",
 ]
