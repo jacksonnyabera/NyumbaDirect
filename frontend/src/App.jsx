@@ -27,16 +27,57 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import PublicInfo from "./pages/PublicInfo";
 import api, { API_BASE_URL } from "./services/api";
-import { getBedroomDisplay } from "./utils/propertyDisplay";
+import { getBedroomDisplay, isPropertyBoostActive } from "./utils/propertyDisplay";
 
 
 /* =========================================================
    HOME PAGE
    ========================================================= */
 
+function HomePropertyCard({ property, boosted }) {
+  const photo = property.photos?.find((item) => item.is_primary) || property.photos?.[0];
+  const imageUrl = photo?.image_url
+    ? (photo.image_url.startsWith("http") ? photo.image_url : `${API_BASE_URL}${photo.image_url}`)
+    : null;
+  const location = [property.area, property.town, property.county].filter(Boolean).join(", ");
+
+  return (
+    <Link to={`/properties/${property.id}`} className="home-listing-card">
+      <div className="home-listing-image">
+        {imageUrl ? (
+          <img src={imageUrl} alt={property.title} loading="lazy" />
+        ) : (
+          <span className="home-listing-image-fallback">Property photo unavailable</span>
+        )}
+        {boosted && <span className="home-listing-boosted">Boosted listing</span>}
+        {property.is_verified && <span className="home-listing-verified">Verified</span>}
+      </div>
+
+      <div className="home-listing-content">
+        <div className="home-listing-title-row">
+          <h3>{property.title}</h3>
+          <span aria-hidden="true">↗</span>
+        </div>
+        <p className="home-listing-location">{location || "Location not provided"}</p>
+        <div className="home-listing-facts">
+          <span>{getBedroomDisplay(property).summary}</span>
+          <span>{property.bathrooms} {Number(property.bathrooms) === 1 ? "bath" : "baths"}</span>
+          <span>{property.property_type}</span>
+        </div>
+        <p className="home-listing-price">
+          KSh {Number(property.monthly_rent || 0).toLocaleString()}
+          <span> / month</span>
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 function Home() {
   const [listingStats, setListingStats] = useState({ available: null, verified: null });
   const [featuredProperty, setFeaturedProperty] = useState(null);
+  const [boostedHomes, setBoostedHomes] = useState([]);
+  const [regularHomes, setRegularHomes] = useState([]);
   const [inventoryState, setInventoryState] = useState("loading");
   const [homeSearch, setHomeSearch] = useState("");
   const navigate = useNavigate();
@@ -44,16 +85,21 @@ function Home() {
   useEffect(() => {
     let active = true;
     Promise.all([
-      api.get("/properties", { params: { limit: 1 } }),
+      api.get("/properties", { params: { limit: 6, boosted: true } }),
+      api.get("/properties", { params: { limit: 6, boosted: false } }),
       api.get("/properties", { params: { limit: 1, verified_only: true } }),
     ])
-      .then(([available, verified]) => {
+      .then(([boosted, regular, verified]) => {
         if (active) {
+          const promotedItems = boosted.data?.items || [];
+          const regularItems = regular.data?.items || [];
+          const item = promotedItems[0] || regularItems[0] || null;
+          setBoostedHomes(promotedItems.filter(isPropertyBoostActive));
+          setRegularHomes(regularItems.filter((property) => !isPropertyBoostActive(property)));
           setListingStats({
-            available: available.data?.total ?? 0,
+            available: (boosted.data?.total ?? 0) + (regular.data?.total ?? 0),
             verified: verified.data?.total ?? 0,
           });
-          const item = available.data?.items?.[0] || null;
           setFeaturedProperty(item);
           setInventoryState(item ? "available" : "empty");
         }
@@ -157,6 +203,7 @@ function Home() {
                     return imageUrl ? <img src={imageUrl} alt={featuredProperty.title} loading="lazy" /> : <span className="home-image-fallback">No photos added yet</span>;
                   })()}
                   {featuredProperty.is_verified && <div className="verified-badge">✓ Verified</div>}
+                  {isPropertyBoostActive(featuredProperty) && <div className="hero-boosted-badge">Boosted listing</div>}
                 </div>
                 <div className="house-info">
                   <div className="house-card-top">
@@ -197,6 +244,77 @@ function Home() {
             )}
           </div>
 
+        </section>
+
+
+        <section className="home-inventory-section" aria-labelledby="home-inventory-title">
+          <div className="home-inventory-inner">
+            <div className="home-inventory-heading">
+              <div>
+                <p className="eyebrow">HOMES TO EXPLORE</p>
+                <h2 id="home-inventory-title">Find your next place</h2>
+                <p>Compare real listings by location, layout and monthly rent.</p>
+              </div>
+              <Link to="/properties" className="home-inventory-link">Browse all homes <span aria-hidden="true">→</span></Link>
+            </div>
+
+            <p className="home-inventory-note">
+              Boosted listings are paid placements. The verification badge is separate and only appears on reviewed listings.
+            </p>
+
+            {inventoryState === "loading" && (
+              <p className="home-listing-state" role="status">Loading current listings...</p>
+            )}
+
+            {boostedHomes.length > 0 && (
+              <section className="home-listing-group" aria-labelledby="boosted-homes-title">
+                <div className="home-listing-group-heading">
+                  <div>
+                    <span className="home-listing-kicker">PROMOTED FIRST</span>
+                    <h3 id="boosted-homes-title">Boosted homes</h3>
+                  </div>
+                  <span className="home-listing-count">{boostedHomes.length} featured</span>
+                </div>
+                <div className="home-listing-grid">
+                  {boostedHomes.map((property) => (
+                    <HomePropertyCard key={property.id} property={property} boosted />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {regularHomes.length > 0 && (
+              <section className="home-listing-group home-listing-group-regular" aria-labelledby="regular-homes-title">
+                <div className="home-listing-group-heading">
+                  <div>
+                    <span className="home-listing-kicker">MORE TO CONSIDER</span>
+                    <h3 id="regular-homes-title">More available homes</h3>
+                  </div>
+                  <span className="home-listing-count">Recently listed</span>
+                </div>
+                <div className="home-listing-grid">
+                  {regularHomes.map((property) => (
+                    <HomePropertyCard key={property.id} property={property} boosted={false} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {inventoryState === "empty" && (
+              <div className="home-listing-state">
+                <h3>No homes listed just yet</h3>
+                <p>Check back soon, or browse all listings to explore what is available.</p>
+                <Link to="/properties" className="home-inventory-link">Browse homes <span aria-hidden="true">→</span></Link>
+              </div>
+            )}
+
+            {inventoryState === "unavailable" && (
+              <div className="home-listing-state" role="status">
+                Listings are temporarily unavailable. You can still open the full property search.
+                <Link to="/properties" className="home-inventory-link">Open property search <span aria-hidden="true">→</span></Link>
+              </div>
+            )}
+          </div>
         </section>
 
 

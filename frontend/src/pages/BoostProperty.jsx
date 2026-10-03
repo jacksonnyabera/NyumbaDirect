@@ -6,20 +6,29 @@ const PACKAGES = [
   {
     key: "7_DAYS",
     days: "7 Days",
+    title: "Quick Lift",
     amount: 300,
-    description: "Give your property a visibility boost for one week.",
+    offer: "Try a short promotion with the lowest upfront cost.",
+    bestFor: "New listings and short-term availability",
+    tag: "LOWEST UPFRONT",
   },
   {
     key: "14_DAYS",
     days: "14 Days",
+    title: "Steady Reach",
     amount: 700,
-    description: "Keep your listing promoted for two weeks.",
+    offer: "Give renters more time to discover your listing.",
+    bestFor: "A balanced, two-week promotion",
+    tag: "BALANCED",
   },
   {
     key: "30_DAYS",
     days: "30 Days",
+    title: "Longer Run",
     amount: 1500,
-    description: "Maximum promotion period for long-term visibility.",
+    offer: "Keep your property promoted for a full month.",
+    bestFor: "Listings that need more time on the market",
+    tag: "LONGEST BOOST",
   },
 ];
 
@@ -471,6 +480,13 @@ function BoostProperty() {
         )}
 
         <section className="boost-packages">
+          <div className="boost-plan-heading">
+            <div>
+              <span className="boost-eyebrow">PICK YOUR PROMOTION</span>
+              <h2>Choose the boost that fits</h2>
+            </div>
+            <p>One-time payment through M-Pesa. Your boost starts after payment is confirmed.</p>
+          </div>
 
           {PACKAGES.map((item) => {
             const selected =
@@ -483,6 +499,7 @@ function BoostProperty() {
                 className={`boost-package-card ${
                   selected ? "selected" : ""
                 }`}
+                aria-pressed={selected}
                 onClick={() => {
                   setSelectedPackage(item);
                   setMessage("");
@@ -495,27 +512,31 @@ function BoostProperty() {
                 disabled={paying || paymentStatus === "PENDING" || paymentStatus === "PAID"}
               >
 
-                {item.key === "14_DAYS" && (
-                  <span className="boost-popular">
-                    POPULAR
-                  </span>
-                )}
-
-                <span className="boost-package-check">
+                <span className="boost-package-tag">{item.tag}</span>
+                <span className={`boost-package-check ${selected ? "is-selected" : ""}`} aria-hidden="true">
                   {selected ? "✓" : ""}
                 </span>
 
-                <span className="boost-package-days">
-                  {item.days}
+                <span className="boost-package-title">{item.title}</span>
+                <span className="boost-package-days">{item.days} of promotion</span>
+
+                <span className="boost-package-price">
+                  <strong>KSh {item.amount.toLocaleString()}</strong>
+                  <span>one-time</span>
                 </span>
 
-                <strong>
-                  KSh{" "}
-                  {item.amount.toLocaleString()}
-                </strong>
+                <span className="boost-package-daily">
+                  About KSh {Math.round(item.amount / Number.parseInt(item.days, 10)).toLocaleString()} per day
+                </span>
 
-                <span className="boost-package-description">
-                  {item.description}
+                <span className="boost-package-description">{item.offer}</span>
+                <span className="boost-package-best-for">
+                  <span>BEST FOR</span>
+                  {item.bestFor}
+                </span>
+
+                <span className={`boost-package-action ${selected ? "is-selected" : ""}`}>
+                  {selected ? "Selected" : "Choose this boost"}
                 </span>
 
               </button>
@@ -535,12 +556,13 @@ function BoostProperty() {
             </span>
 
             <h2>
-              Pay securely from your phone
+              {selectedPackage ? `Pay for ${selectedPackage.title}` : "Complete your boost"}
             </h2>
 
             <p>
-              After you continue, an M-Pesa STK
-              prompt will be sent to this number.
+              {selectedPackage
+                ? `${selectedPackage.days} of promotion for KSh ${selectedPackage.amount.toLocaleString()}. An M-Pesa prompt will be sent to your phone.`
+                : "Choose a boost above to see your total and continue to M-Pesa."}
             </p>
           </div>
 
@@ -753,28 +775,54 @@ function BoostProperty() {
           margin-bottom: 22px;
         }
 
+        .boost-plan-heading {
+          grid-column: 1 / -1;
+          display: flex;
+          align-items: end;
+          justify-content: space-between;
+          gap: 24px;
+          margin: 12px 0 2px;
+        }
+
+        .boost-plan-heading h2 {
+          margin: 7px 0 0;
+          font-size: 25px;
+        }
+
+        .boost-plan-heading p {
+          max-width: 330px;
+          margin: 0;
+          color: #64748b;
+          font-size: 13px;
+          line-height: 1.55;
+          text-align: right;
+        }
+
         .boost-package-card {
           position: relative;
-          min-height: 230px;
-          padding: 24px;
-          border: 2px solid #e2e8f0;
-          border-radius: 20px;
+          display: flex;
+          min-width: 0;
+          min-height: 330px;
+          flex-direction: column;
+          align-items: stretch;
+          padding: 22px;
+          border: 1px solid #dbe3e8;
+          border-radius: 14px;
           background: white;
           text-align: left;
           cursor: pointer;
           transition:
-            transform .2s ease,
+            transform .18s ease,
             border-color .2s ease,
             box-shadow .2s ease;
         }
 
         .boost-package-card:hover {
           transform:
-            translateY(-3px);
-          border-color:
-            #94a3b8;
+            translateY(-2px);
+          border-color: #0f766e;
           box-shadow:
-            0 14px 32px
+            0 12px 26px
             rgba(
               15,
               23,
@@ -784,9 +832,11 @@ function BoostProperty() {
         }
 
         .boost-package-card.selected {
-          border-color: #0f766e;
+          border: 2px solid #0f766e;
+          padding: 21px;
+          background: #f3fbf9;
           box-shadow:
-            0 14px 34px
+            0 12px 28px
             rgba(
               15,
               118,
@@ -795,61 +845,120 @@ function BoostProperty() {
             );
         }
 
-        .boost-package-card strong,
-        .boost-package-days,
-        .boost-package-description {
-          display: block;
+          .boost-package-card:focus-visible {
+            outline: 3px solid rgba(15, 118, 110, .25);
+            outline-offset: 3px;
         }
 
-        .boost-package-days {
-          margin-top: 18px;
-          color: #475569;
-          font-weight: 800;
+          .boost-package-tag {
+            align-self: flex-start;
+            margin-bottom: 17px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            background: #eaf5f2;
+            color: #17665e;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .08em;
         }
 
-        .boost-package-card strong {
-          margin: 7px 0 12px;
-          font-size: 28px;
+          .boost-package-title {
+            color: #142b2a;
+            font-size: 20px;
+            font-weight: 850;
         }
 
-        .boost-package-description {
+          .boost-package-days {
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 650;
+          }
+
+          .boost-package-price {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-top: 18px;
+          }
+
+          .boost-package-price strong {
+            color: #102b2a;
+            font-size: 29px;
+            line-height: 1.15;
+          }
+
+          .boost-package-price > span {
+            color: #64748b;
+            font-size: 12px;
+          }
+
+          .boost-package-daily {
+            margin-top: 5px;
+            color: #17665e;
+            font-size: 12px;
+            font-weight: 750;
+          }
+
+          .boost-package-description {
+            display: block;
+            min-height: 42px;
+            margin-top: 15px;
           color: #64748b;
           line-height: 1.5;
           font-size: 14px;
         }
 
+          .boost-package-best-for {
+            display: grid;
+            gap: 4px;
+            margin-top: 12px;
+            color: #334155;
+            font-size: 12px;
+            line-height: 1.4;
+          }
+
+          .boost-package-best-for > span {
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .08em;
+          }
+
+          .boost-package-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            margin-top: auto;
+            padding-top: 16px;
+            color: #17665e;
+            font-size: 13px;
+            font-weight: 850;
+          }
+
+          .boost-package-action.is-selected {
+            color: #0f766e;
+          }
+
         .boost-package-check {
           position: absolute;
-          top: 16px;
-          right: 16px;
-          width: 28px;
-          height: 28px;
+            top: 18px;
+            right: 18px;
+            width: 24px;
+            height: 24px;
+            border: 1px solid #cbd5e1;
           display: grid;
           place-items: center;
           border-radius: 50%;
-          background: #f1f5f9;
-          color: white;
+            background: white;
+            color: white;
           font-weight: 900;
         }
 
-        .boost-package-card.selected
-        .boost-package-check {
+          .boost-package-check.is-selected {
           background: #0f766e;
-        }
-
-        .boost-popular {
-          position: absolute;
-          top: 0;
-          left: 22px;
-          transform:
-            translateY(-50%);
-          padding: 5px 9px;
-          border-radius: 999px;
-          background: #2563eb;
-          color: white;
-          font-size: 10px;
-          font-weight: 900;
-          letter-spacing: .08em;
+            border-color: #0f766e;
         }
 
         .boost-payment-card {
@@ -978,7 +1087,22 @@ function BoostProperty() {
         @media (max-width: 760px) {
 
           .boost-packages {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .boost-package-card:last-child {
+            grid-column: 1 / -1;
+          }
+
+          .boost-plan-heading {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .boost-plan-heading p {
+            max-width: none;
+            text-align: left;
           }
 
           .boost-property-card {
@@ -1005,8 +1129,24 @@ function BoostProperty() {
           }
 
           .boost-package-card {
-            min-height: 190px;
-            padding: 20px;
+            min-height: 310px;
+            padding: 17px;
+          }
+
+          .boost-package-card.selected {
+            padding: 16px;
+          }
+
+          .boost-package-card:last-child {
+            grid-column: auto;
+          }
+
+          .boost-packages {
+            grid-template-columns: 1fr;
+          }
+
+          .boost-package-description {
+            min-height: 0;
           }
 
           .boost-header h1 {

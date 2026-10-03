@@ -136,6 +136,7 @@ def list_properties(
     min_bedrooms: int | None = Query(default=None, ge=0),
     max_bedrooms: int | None = Query(default=None, ge=0),
     verified_only: bool = False,
+    boosted: bool | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -147,6 +148,12 @@ def list_properties(
             selectinload(Property.photos),
         )
         .where(Property.is_available.is_(True))
+    )
+    now = datetime.now(timezone.utc)
+    active_boost = (
+        Property.is_featured.is_(True)
+        & Property.featured_until.is_not(None)
+        & (Property.featured_until > now)
     )
 
     # --------------------------------------------------------
@@ -196,6 +203,11 @@ def list_properties(
     if verified_only:
         query = query.where(Property.is_verified.is_(True))
 
+    if boosted is True:
+        query = query.where(active_boost)
+    elif boosted is False:
+        query = query.where(~active_boost)
+
     # --------------------------------------------------------
     # TOTAL COUNT
     # --------------------------------------------------------
@@ -215,15 +227,8 @@ def list_properties(
     # - featured_until is still in the future
     # --------------------------------------------------------
 
-    now = datetime.now(timezone.utc)
-
     featured_order = case(
-        (
-            (Property.is_featured.is_(True))
-            & (Property.featured_until.is_not(None))
-            & (Property.featured_until > now),
-            1,
-        ),
+        (active_boost, 1),
         else_=0,
     )
 
