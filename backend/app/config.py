@@ -6,8 +6,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "NyumbaDirect"
-    app_env: str = "development"
-    debug: bool = True
+    app_env: str = "production"
+    debug: bool = False
+    trusted_hosts: str = (
+        "localhost,127.0.0.1,nyumbadirect-bjig.onrender.com,"
+        "nyumbadirect.co.ke,www.nyumbadirect.co.ke"
+    )
 
     database_url: str
 
@@ -47,6 +51,13 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @property
+    def allowed_hostnames(self) -> list[str]:
+        hosts = [host.strip() for host in self.trusted_hosts.split(",") if host.strip()]
+        if self.app_env.casefold() not in {"production", "prod"}:
+            hosts.append("testserver")
+        return hosts
 
     mpesa_consumer_key: str = ""
     mpesa_consumer_secret: str = ""

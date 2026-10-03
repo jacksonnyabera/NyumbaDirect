@@ -1,7 +1,10 @@
 import os
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from app.config import settings
 from app.routers import auth
 from app.routers import properties
 from app.routers import health
@@ -16,10 +19,15 @@ from app.routers import favorites
 from app.routers import reviews
 
 os.makedirs("uploads", exist_ok=True)
+is_production = settings.app_env.casefold() in {"production", "prod"}
 app = FastAPI(
     title="NyumbaDirect API",
     description="Direct connection between house hunters and landlords/property managers.",
     version="1.0.0",
+    debug=settings.debug and not is_production,
+    docs_url=None if is_production else "/docs",
+    redoc_url=None if is_production else "/redoc",
+    openapi_url=None if is_production else "/openapi.json",
 )
 
 
@@ -38,11 +46,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=settings.allowed_hostnames,
+)
 app.mount(
     "/uploads",
     StaticFiles(directory="uploads"),
     name="uploads",
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if is_production:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    return response
 
 
 app.include_router(health.router)

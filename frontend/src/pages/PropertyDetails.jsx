@@ -4,6 +4,18 @@ import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
 import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
 
+function upsertMeta(selector, attributes, content) {
+  let element = document.head.querySelector(selector);
+  if (!element) {
+    element = document.createElement("meta");
+    Object.entries(attributes).forEach(([name, value]) => {
+      element.setAttribute(name, value);
+    });
+    document.head.appendChild(element);
+  }
+  element.setAttribute("content", content);
+}
+
 function getOrCreateVisitorId() {
   const storageKey = "nyumbadirect_visitor_id";
   const existingId = localStorage.getItem(storageKey);
@@ -98,6 +110,81 @@ function PropertyDetails() {
       document.getElementById("property-reviews")?.scrollIntoView({ block: "start" });
     }
   }, [loading]);
+
+  useEffect(() => {
+    if (!property) return;
+
+    const siteUrl = "https://www.nyumbadirect.co.ke";
+    const canonicalUrl = `${siteUrl}/properties/${property.id}`;
+    const location = [property.area, property.town, property.county].filter(Boolean).join(", ");
+    const price = Number(property.monthly_rent || 0).toLocaleString("en-KE");
+    const title = `${property.title} for Rent${location ? ` in ${location}` : " in Kenya"} | NyumbaDirect`;
+    const description = `${property.title} for rent${location ? ` in ${location}` : " in Kenya"} for KSh ${price} per month. View photos, property details and contact the landlord on NyumbaDirect.`.slice(0, 160);
+    const imageUrls = (property.photos || [])
+      .map((photo) => photo?.image_url)
+      .filter(Boolean)
+      .map((imageUrl) => imageUrl.startsWith("http") ? imageUrl : `${API_BASE_URL}${imageUrl}`);
+    const shareImage = imageUrls[0] || `${siteUrl}/og-image.svg`;
+
+    document.title = title;
+    upsertMeta('meta[name="description"]', { name: "description" }, description);
+    upsertMeta('meta[name="keywords"]', { name: "keywords" }, `${property.title}, ${location}, ${property.property_type || "rental home"}, house for rent Kenya`);
+    upsertMeta('meta[property="og:title"]', { property: "og:title" }, title);
+    upsertMeta('meta[property="og:description"]', { property: "og:description" }, description);
+    upsertMeta('meta[property="og:url"]', { property: "og:url" }, canonicalUrl);
+    upsertMeta('meta[property="og:image"]', { property: "og:image" }, shareImage);
+    upsertMeta('meta[name="twitter:title"]', { name: "twitter:title" }, title);
+    upsertMeta('meta[name="twitter:description"]', { name: "twitter:description" }, description);
+    upsertMeta('meta[name="twitter:image"]', { name: "twitter:image" }, shareImage);
+
+    let canonical = document.head.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", canonicalUrl);
+
+    const propertyType = String(property.property_type || "").toLowerCase();
+    const schemaType = propertyType.includes("house")
+      ? "House"
+      : propertyType.includes("apartment")
+        ? "Apartment"
+        : "Residence";
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": schemaType,
+      name: property.title,
+      description: property.description,
+      url: canonicalUrl,
+      image: imageUrls.length ? imageUrls : [shareImage],
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: property.town || property.area,
+        addressRegion: property.county,
+        addressCountry: "KE",
+      },
+      numberOfBedrooms: property.bedrooms,
+      numberOfBathroomsTotal: property.bathrooms,
+      offers: {
+        "@type": "Offer",
+        price: Number(property.monthly_rent || 0),
+        priceCurrency: "KES",
+        availability: property.is_available
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+        url: canonicalUrl,
+      },
+    };
+    let schemaScript = document.getElementById("property-jsonld");
+    if (!schemaScript) {
+      schemaScript = document.createElement("script");
+      schemaScript.id = "property-jsonld";
+      schemaScript.type = "application/ld+json";
+      document.head.appendChild(schemaScript);
+    }
+    schemaScript.textContent = JSON.stringify(structuredData);
+  }, [property]);
 
   const handleContactLandlord = async () => {
     try {

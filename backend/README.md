@@ -6,6 +6,8 @@ The API is a FastAPI service. Its public readiness endpoint is `/health/ready`; 
 
 Provide these through the hosting provider's secret/environment settings. Do not commit production values:
 
+- `APP_ENV=production` (the default) to disable debug responses and interactive API docs; set `APP_ENV=development` only for local development. `DEBUG` defaults to `false` and cannot enable FastAPI debug mode in production
+- `TRUSTED_HOSTS` as a comma-separated allowlist when deploying on a host outside the configured NyumbaDirect domains
 - `DATABASE_URL`
 - `JWT_SECRET_KEY`
 - `PUBLIC_API_URL` (the public HTTPS API origin used in account verification links)
@@ -13,6 +15,8 @@ Provide these through the hosting provider's secret/environment settings. Do not
 - `VERIFICATION_CODE_TTL_MINUTES`, `VERIFICATION_CODE_MAX_ATTEMPTS`, and `VERIFICATION_RESEND_COOLDOWN_SECONDS` to tune signup-code expiry and resend limits (defaults: 10 minutes, 5 attempts, and 60 seconds)
 - `SMS_PROVIDER=africas_talking`, `SMS_API_KEY`, `SMS_USERNAME`, and `SMS_ENVIRONMENT=sandbox` or `production` for SMS signup codes. Set `SMS_SENDER_ID` only after Africa's Talking has approved the sender ID for your account.
 - `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY`, `MPESA_SHORTCODE`, `MPESA_ENVIRONMENT`, `MPESA_CALLBACK_URL`, and `MPESA_CALLBACK_SECRET` for paid listing boosts
+
+Configure the hosting edge or shared gateway to rate-limit `/auth/login`, `/auth/forgot-password`, and `/auth/resend-verification`. Avoid relying on an in-process limiter in multi-worker deployments, since each worker would maintain a separate counter.
 
 `MPESA_CALLBACK_URL` should be the public HTTPS URL for `/payments/mpesa/callback`. Set `MPESA_CALLBACK_SECRET` to a long random value and keep it private. The API adds it as the callback URL's `key` parameter and checks it with a constant-time comparison before accepting payment results. Payment initiation fails closed when either callback setting is missing.
 

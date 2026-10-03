@@ -36,7 +36,7 @@ def create_access_token(
             minutes=settings.access_token_expire_minutes
         )
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
 
     return jwt.encode(
         to_encode,
@@ -80,6 +80,11 @@ def decode_access_token(token: str) -> dict | None:
             settings.jwt_secret_key,
             algorithms=[settings.jwt_algorithm],
         )
+
+        # Accept legacy access tokens until they expire, but reject signed
+        # verification and password-reset tokens on authenticated routes.
+        if payload.get("type") not in (None, "access"):
+            return None
 
         return payload
 

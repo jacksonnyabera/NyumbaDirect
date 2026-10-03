@@ -6,7 +6,7 @@
   <text x="80" y="160" font-family="Inter, Arial" font-size="44" font-weight="700" fill="#065f46">NYUMBADIRECT</text>
   <text x="80" y="260" font-family="Inter, Arial" font-size="82" font-weight="800" fill="#0f172a">Find a home</text>
   <text x="80" y="340" font-family="Inter, Arial" font-size="82" font-weight="800" fill="#0f766e">Directly in Kenya</text>
-  <text x="80" y="420" font-family="Inter, Arial" font-size="34" font-weight="400" fill="#334155">Verified homes, apartments and rentals</text>
+  <text x="80" y="420" font-family="Inter, Arial" font-size="34" font-weight="400" fill="#334155">Rental homes across Kenya</text>
   <circle cx="960" cy="260" r="150" fill="#14532d" opacity="0.96"/>
   <path d="M930 250 L960 190 L990 250 L970 260 L960 230 L950 260 Z" fill="#ecfdf5"/>
   <path d="M930 270 L960 300 L990 270" fill="none" stroke="#ecfdf5" stroke-width="8"/>

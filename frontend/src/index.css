@@ -11573,3 +11573,70 @@ body,
   }
 }
 
+@media (max-width: 820px) {
+  .admin-verification-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-back-button {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .marketplace-result-tools {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .marketplace-result-tools select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .marketplace-result-tools .results-clear {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .auth-field input,
+  .auth-field select,
+  .form-section input,
+  .form-section select,
+  .form-section textarea,
+  .main-search input,
+  .message-form input,
+  .message-form textarea,
+  .details-review-form select,
+  .details-review-form textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .properties-container,
+  .property-details-container,
+  .add-property-container,
+  .admin-verification-container,
+  .saved-homes-container {
+    width: calc(100% - 20px);
+  }
+
+  .property-form-card {
+    padding: 16px 12px;
+  }
+
+  .marketplace-result-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace-result-tools select,
+  .marketplace-result-tools .results-clear {
+    grid-column: 1;
+    width: 100%;
+  }
+}
+

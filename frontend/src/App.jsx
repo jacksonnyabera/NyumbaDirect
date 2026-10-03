@@ -1035,6 +1035,13 @@ function getRouteMeta(pathname) {
       index: false,
     },
 
+    "/admin/verification": {
+      title: "Admin Verification | NyumbaDirect Kenya",
+      description: "Review account verification requests.",
+      keywords: "",
+      index: false,
+    },
+
   };
 
 
@@ -1110,11 +1117,8 @@ function getRouteMeta(pathname) {
   }
 
 
-  /* BOOST PROPERTY */
-
-  if (
-    pathname.startsWith("/boost/")
-  ) {
+  /* PRIVATE PROMOTION ROUTES */
+  if (pathname.startsWith("/boost/") || pathname.startsWith("/boost-property/")) {
 
     return {
 
@@ -1133,10 +1137,12 @@ function getRouteMeta(pathname) {
   }
 
 
-  return (
-    routeMap[pathname] ||
-    routeMap["/"]
-  );
+  return routeMap[pathname] || {
+    title: "Page Not Found | NyumbaDirect Kenya",
+    description: "The requested NyumbaDirect page could not be found.",
+    keywords: "",
+    index: false,
+  };
 }
 
 
@@ -1270,7 +1276,7 @@ function AppSEO() {
     robots.setAttribute(
       "content",
       meta.index
-        ? "index, follow"
+        ? "index, follow, max-image-preview:large"
         : "noindex, nofollow"
     );
 
@@ -1405,6 +1411,30 @@ function AppSEO() {
       "content",
       currentUrl
     );
+
+    const upsertMeta = (selector, attributes, content) => {
+      let element = document.querySelector(selector);
+      if (!element) {
+        element = document.createElement("meta");
+        Object.entries(attributes).forEach(([name, value]) => {
+          element.setAttribute(name, value);
+        });
+        document.head.appendChild(element);
+      }
+      element.setAttribute("content", content);
+    };
+
+    upsertMeta('meta[name="twitter:title"]', { name: "twitter:title" }, meta.title);
+    upsertMeta('meta[name="twitter:description"]', { name: "twitter:description" }, meta.description);
+    upsertMeta('meta[property="og:type"]', { property: "og:type" }, "website");
+    upsertMeta('meta[property="og:image"]', { property: "og:image" }, `${siteUrl}/og-image.svg`);
+    upsertMeta('meta[property="og:image:alt"]', { property: "og:image:alt" }, "NyumbaDirect rental homes in Kenya");
+    upsertMeta('meta[name="twitter:card"]', { name: "twitter:card" }, "summary_large_image");
+    upsertMeta('meta[name="twitter:image"]', { name: "twitter:image" }, `${siteUrl}/og-image.svg`);
+
+    if (!location.pathname.startsWith("/properties/")) {
+      document.getElementById("property-jsonld")?.remove();
+    }
 
   }, [
     location.pathname,

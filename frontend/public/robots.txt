@@ -7,5 +7,9 @@ Disallow: /messages
 Disallow: /saved-homes
 Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /verify-account
+Disallow: /admin/verification
+Disallow: /boost/
+Disallow: /boost-property/
 
 Sitemap: https://www.nyumbadirect.co.ke/sitemap.xml
