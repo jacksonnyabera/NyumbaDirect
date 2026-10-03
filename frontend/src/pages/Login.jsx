@@ -8,7 +8,6 @@ function Login() {
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [needsVerification, setNeedsVerification] = useState(false);
 
   const navigate = useNavigate();
 
@@ -28,7 +27,6 @@ function Login() {
     }
 
     setError("");
-    setNeedsVerification(false);
     setLoading(true);
 
     try {
@@ -56,15 +54,6 @@ function Login() {
 
       if (user?.id) {
         localStorage.setItem("user_id", String(user.id));
-      }
-
-      // Check whether the account has been verified.
-      if (user && user.is_verified === false) {
-        setNeedsVerification(true);
-        setError(
-          "Your account has not been verified yet. Please verify your account before continuing."
-        );
-        return;
       }
 
       navigate("/dashboard");
@@ -128,18 +117,6 @@ function Login() {
           </div>
         )}
 
-        {needsVerification && (
-          <Link
-            className="auth-button"
-            to="/verify-account"
-            state={{
-              email: email.trim().toLowerCase(),
-            }}
-          >
-            Verify your account
-          </Link>
-        )}
-
         <form className="auth-form" onSubmit={handleLogin}>
           <div className="auth-field">
             <label htmlFor="email">Email</label>
@@ -152,7 +129,6 @@ function Login() {
               placeholder="you@example.com"
               onChange={(event) => {
                 setEmail(event.target.value);
-                setNeedsVerification(false);
               }}
               autoComplete="email"
               required
