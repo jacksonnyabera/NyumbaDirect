@@ -11555,6 +11555,17 @@ body,
   }
 }
 
+.route-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f6f8f7;
+  color: #17665e;
+  font-size: 14px;
+  font-weight: 750;
+}
+
 @media (max-width: 560px) {
   .details-review-item-heading {
     flex-direction: column;

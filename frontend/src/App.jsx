@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -9,23 +9,23 @@ import {
   Navigate,
 } from "react-router-dom";
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import VerifyAccount from "./pages/VerifyAccount";
-import Properties from "./pages/Properties";
-import PropertyDetails from "./pages/PropertyDetails";
-import Dashboard from "./pages/Dashboard";
-import AddProperty from "./pages/AddProperty";
-import EditProperty from "./pages/EditProperty";
-import Conversations from "./pages/Conversations";
-import Messages from "./pages/Messages";
-import SavedHomes from "./pages/SavedHomes";
-import BoostProperty from "./pages/BoostProperty";
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const VerifyAccount = lazy(() => import("./pages/VerifyAccount"));
+const Properties = lazy(() => import("./pages/Properties"));
+const PropertyDetails = lazy(() => import("./pages/PropertyDetails"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AddProperty = lazy(() => import("./pages/AddProperty"));
+const EditProperty = lazy(() => import("./pages/EditProperty"));
+const Conversations = lazy(() => import("./pages/Conversations"));
+const Messages = lazy(() => import("./pages/Messages"));
+const SavedHomes = lazy(() => import("./pages/SavedHomes"));
+const BoostProperty = lazy(() => import("./pages/BoostProperty"));
 import Navigation from "./components/Navigation";
-import AdminVerification from "./pages/AdminVerification";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import PublicInfo from "./pages/PublicInfo";
+const AdminVerification = lazy(() => import("./pages/AdminVerification"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const PublicInfo = lazy(() => import("./pages/PublicInfo"));
 import api, { API_BASE_URL } from "./services/api";
 import { getBedroomDisplay, isPropertyBoostActive } from "./utils/propertyDisplay";
 
@@ -1549,6 +1549,7 @@ function App() {
       <AppSEO />
 
 
+      <Suspense fallback={<div className="route-loading" role="status">Loading page...</div>}>
       <Routes>
 
 
@@ -1667,6 +1668,7 @@ function App() {
         />
 
       </Routes>
+      </Suspense>
 
 
 
