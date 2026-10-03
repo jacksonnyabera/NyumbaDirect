@@ -19,6 +19,7 @@ function Properties() {
   const [bedrooms, setBedrooms] = useState("");
   const [maxRent, setMaxRent] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState("recommended");
 
   const { favoriteIds: favorites, toggleFavorite, error: favoritesError } = useFavorites();
 
@@ -101,7 +102,21 @@ function Properties() {
     }
   };
 
-  const filteredProperties = properties;
+  const filteredProperties = [...properties].sort((first, second) => {
+    const boostDifference = Number(isPropertyBoostActive(second)) - Number(isPropertyBoostActive(first));
+    if (boostDifference) return boostDifference;
+
+    if (sortBy === "rent-low") {
+      return Number(first.monthly_rent || 0) - Number(second.monthly_rent || 0);
+    }
+    if (sortBy === "rent-high") {
+      return Number(second.monthly_rent || 0) - Number(first.monthly_rent || 0);
+    }
+    if (sortBy === "newest") {
+      return Date.parse(second.created_at || "") - Date.parse(first.created_at || "");
+    }
+    return 0;
+  });
 
   const clearFilters = () => {
     setSearch("");
@@ -157,7 +172,7 @@ function Properties() {
           <div className="marketplace-heading">
 
             <span className="eyebrow">
-              🏠 NYUMBADIRECT MARKETPLACE
+              RENTAL MARKETPLACE · KENYA
             </span>
 
             <h1>
@@ -171,45 +186,6 @@ function Properties() {
             </p>
 
           </div>
-          <section className="properties-seo-intro">
-  <h2>Houses and Apartments for Rent in Kenya</h2>
-
-  <p>
-    Find houses, apartments, bedsitters, studios and other rental
-    properties across Kenya on NyumbaDirect. Search by town, area,
-    county, property type, bedrooms and monthly rent.
-  </p>
-
-  <p>
-    NyumbaDirect connects house hunters directly with landlords and
-    property managers, helping you discover rental homes and communicate
-    about available properties without relying on traditional agents.
-  </p>
-
-  <p>
-    Explore rental properties in Nairobi, Mombasa, Kisumu, Kirinyaga
-    and other towns across Kenya.
-  </p>
-</section>
-
-          <div className="marketplace-header-actions">
-
-            <Link
-              to="/messages"
-              className="marketplace-link"
-            >
-              💬 Messages
-            </Link>
-
-            <Link
-              to="/dashboard"
-              className="marketplace-link"
-            >
-              Dashboard
-            </Link>
-
-          </div>
-
         </header>
 
         {/* SEARCH PANEL */}
@@ -219,7 +195,7 @@ function Properties() {
           <div className="main-search">
 
             <span className="search-icon">
-              🔍
+              Search
             </span>
 
             <input
@@ -353,7 +329,7 @@ function Properties() {
               />
 
               <span>
-                ✓ Verified only
+                Verified listings
               </span>
 
             </label>
@@ -376,27 +352,34 @@ function Properties() {
 
         {!loading && !error && (
           <div className="marketplace-results-bar">
-
-            <div>
-              <strong>
-                {total}
-              </strong>{" "}
-              {total === 1
-                ? "home"
-                : "homes"}{" "}
-              found
+            <div className="marketplace-results-count">
+              <strong>{total.toLocaleString()}</strong>
+              <span>{total === 1 ? " home found" : " homes found"}</span>
             </div>
 
-            {activeFilters && (
-              <button
-                type="button"
-                className="results-clear"
-                onClick={clearFilters}
+            <div className="marketplace-result-tools">
+              <label htmlFor="marketplace-sort">Sort by</label>
+              <select
+                id="marketplace-sort"
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
               >
-                Reset search
-              </button>
-            )}
+                <option value="recommended">Recommended</option>
+                <option value="newest">Newest</option>
+                <option value="rent-low">Rent: low to high</option>
+                <option value="rent-high">Rent: high to low</option>
+              </select>
 
+              {activeFilters && (
+                <button
+                  type="button"
+                  className="results-clear"
+                  onClick={clearFilters}
+                >
+                  Reset filters
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -537,7 +520,7 @@ function Properties() {
 
                         {isPropertyBoostActive(property) && (
                           <span className="featured-badge">
-                            ★ Featured
+                            Boosted listing
                           </span>
                         )}
 
@@ -570,6 +553,8 @@ function Properties() {
                             ? "Remove from favorites"
                             : "Add to favorites"
                         }
+                        aria-pressed={isFavorite}
+                        title={isFavorite ? "Remove from saved homes" : "Save this home"}
                       >
                         {isFavorite ? "♥" : "♡"}
                       </button>
@@ -686,6 +671,21 @@ function Properties() {
               </button>
             </div>
           )}
+
+        {!loading && !error && (
+          <section className="properties-seo-intro">
+            <h2>Rental homes across Kenya</h2>
+            <p>
+              Search houses, apartments, bedsitters and studios by location, monthly rent,
+              bedrooms and property type. Contact landlords and property managers directly
+              through NyumbaDirect.
+            </p>
+            <p>
+              Browse homes in Nairobi, Mombasa, Kisumu and other towns. Confirm property
+              details and availability with the owner before making any payment.
+            </p>
+          </section>
+        )}
 
         {/* BOTTOM TRUST STRIP */}
 

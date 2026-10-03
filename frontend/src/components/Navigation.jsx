@@ -114,6 +114,13 @@ function Navigation() {
                 Messages
               </Link>
 
+              <Link
+                to="/saved-homes"
+                className="nd-nav-message"
+              >
+                Saved Homes
+              </Link>
+
               <button
                 type="button"
                 className="nd-nav-logout"
@@ -236,6 +243,13 @@ function Navigation() {
               onClick={closeMenu}
             >
               Messages
+            </Link>
+
+            <Link
+              to="/saved-homes"
+              onClick={closeMenu}
+            >
+              Saved Homes
             </Link>
 
             <button
