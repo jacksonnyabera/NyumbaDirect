@@ -17,6 +17,8 @@ from app.routers import verification
 from app.routers import assistant
 from app.routers import favorites
 from app.routers import reviews
+from app.routers.admin_dashboard import router as admin_dashboard_router
+from app.routers.admin_verification import router as admin_verification_router
 
 os.makedirs("uploads", exist_ok=True)
 is_production = settings.app_env.casefold() in {"production", "prod"}
@@ -28,23 +30,6 @@ app = FastAPI(
     docs_url=None if is_production else "/docs",
     redoc_url=None if is_production else "/redoc",
     openapi_url=None if is_production else "/openapi.json",
-)
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://127.0.0.1:5174",
-        "http://localhost:5174",
-        "https://nyumba-direct-rust.vercel.app",
-        "https://nyumbadirect.co.ke",
-        "https://www.nyumbadirect.co.ke",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 app.add_middleware(
     TrustedHostMiddleware,
@@ -79,6 +64,8 @@ app.include_router(verification.router)
 app.include_router(assistant.router)
 app.include_router(favorites.router)
 app.include_router(reviews.router)
+app.include_router(admin_dashboard_router)
+app.include_router(admin_verification_router)
 @app.get("/")
 def root():
     return {
