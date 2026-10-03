@@ -26,6 +26,7 @@ const AdminVerification = lazy(() => import("./pages/AdminVerification"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const PublicInfo = lazy(() => import("./pages/PublicInfo"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 import api, { API_BASE_URL } from "./services/api";
 import { getBedroomDisplay, isPropertyBoostActive } from "./utils/propertyDisplay";
 
@@ -983,6 +984,13 @@ function getRouteMeta(pathname) {
       index: true,
     },
 
+    "/admin": {
+      title: "Admin Control Center | NyumbaDirect Kenya",
+      description: "Restricted NyumbaDirect administration workspace.",
+      keywords: "",
+      index: false,
+    },
+
 
     "/dashboard": {
       title:
@@ -1610,6 +1618,7 @@ function App() {
         <Route path="/contact" element={<PublicInfo />} />
         <Route path="/privacy-policy" element={<PublicInfo />} />
         <Route path="/terms-conditions" element={<PublicInfo />} />
+        <Route path="/admin" element={<AdminDashboard />} />
 
 
         {/* PROPERTIES */}

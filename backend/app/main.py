@@ -17,6 +17,8 @@ from app.routers import verification
 from app.routers import assistant
 from app.routers import favorites
 from app.routers import reviews
+from app.routers.admin_dashboard import router as admin_dashboard_router
+from app.routers.admin_verification import router as admin_verification_router
 
 os.makedirs("uploads", exist_ok=True)
 is_production = settings.app_env.casefold() in {"production", "prod"}
@@ -79,6 +81,8 @@ app.include_router(verification.router)
 app.include_router(assistant.router)
 app.include_router(favorites.router)
 app.include_router(reviews.router)
+app.include_router(admin_dashboard_router)
+app.include_router(admin_verification_router)
 @app.get("/")
 def root():
     return {
