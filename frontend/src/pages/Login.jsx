@@ -56,7 +56,11 @@ function Login() {
         localStorage.setItem("user_id", String(user.id));
       }
 
-      navigate("/dashboard");
+      navigate(
+        user?.role?.toUpperCase() === "ADMIN"
+          ? "/admin"
+          : "/dashboard"
+      );
     } catch (error) {
       console.error("Login error:", error);
 
@@ -74,13 +78,19 @@ function Login() {
         setError(
           detail || "Invalid email or password."
         );
+      } else if (error.code === "ERR_NETWORK") {
+        setError(
+          "Unable to reach the NyumbaDirect server. Check your connection and try again."
+        );
+      } else if (error.code === "ECONNABORTED") {
+        setError(
+          "The server took too long to respond. Please try again."
+        );
       } else if (detail) {
         setError(detail);
-      } else if (error.message) {
-        setError(error.message);
       } else {
         setError(
-          "Unable to connect to the server. Please try again."
+          "Unable to sign in right now. Please try again."
         );
       }
 

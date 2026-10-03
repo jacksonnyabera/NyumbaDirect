@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.codex-build-check/
 
 # Editor directories and files
 .vscode/*

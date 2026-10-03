@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     @property
     def allowed_hostnames(self) -> list[str]:
         hosts = [host.strip() for host in self.trusted_hosts.split(",") if host.strip()]
+        for hostname in (
+            "api.nyumbadirect.co.ke",
+            "nyumbadirect.co.ke",
+            "www.nyumbadirect.co.ke",
+        ):
+            if hostname not in hosts:
+                hosts.append(hostname)
         if self.app_env.casefold() not in {"production", "prod"}:
             hosts.append("testserver")
         return hosts
