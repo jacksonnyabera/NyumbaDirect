@@ -31,6 +31,23 @@ app = FastAPI(
     redoc_url=None if is_production else "/redoc",
     openapi_url=None if is_production else "/openapi.json",
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://www.nyumbadirect.co.ke",
+        "https://nyumbadirect.co.ke",
+        "https://nyumba-direct-rust.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=settings.allowed_hostnames,
