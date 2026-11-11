@@ -22,6 +22,7 @@ function Navigation() {
 
   return (
     <header className="site-navigation">
+      <a className="nd-skip-link" href="#main-content">Skip to main content</a>
 
       <div className="navigation-inner">
 
@@ -51,7 +52,7 @@ function Navigation() {
             DESKTOP NAVIGATION
             ================================================= */}
 
-        <nav className="nd-desktop-nav">
+        <nav className="nd-desktop-nav" aria-label="Main navigation">
 
           <Link
             to="/"
@@ -172,6 +173,7 @@ function Navigation() {
           }
           aria-label="Toggle navigation menu"
           aria-expanded={menuOpen}
+          aria-controls="nd-mobile-menu"
         >
 
           <span></span>
@@ -188,6 +190,9 @@ function Navigation() {
           ================================================= */}
 
       <div
+        id="nd-mobile-menu"
+        role="navigation"
+        aria-label="Mobile navigation"
         className={`nd-mobile-menu ${
           menuOpen ? "open" : ""
         }`}
