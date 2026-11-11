@@ -198,8 +198,10 @@ function Properties() {
               Search
             </span>
 
+            <label className="sr-only" htmlFor="property-search">Search by town, area, county or property name</label>
             <input
-              type="text"
+              id="property-search"
+              type="search"
               placeholder="Search by town, area, county or property name..."
               value={search}
               onChange={(event) =>
