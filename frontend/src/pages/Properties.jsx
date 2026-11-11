@@ -161,7 +161,7 @@ function Properties() {
   };
 
   return (
-    <div className="properties-page">
+    <div className="properties-page" id="main-content" tabIndex="-1">
 
       <div className="properties-container">
 
@@ -190,7 +190,7 @@ function Properties() {
 
         {/* SEARCH PANEL */}
 
-        <section className="marketplace-search">
+        <section className="marketplace-search" aria-label="Search and filter rental homes">
 
           <div className="main-search">
 
@@ -351,7 +351,7 @@ function Properties() {
         {/* RESULTS BAR */}
 
         {!loading && !error && (
-          <div className="marketplace-results-bar">
+          <div className="marketplace-results-bar" aria-live="polite" aria-atomic="true">
             <div className="marketplace-results-count">
               <strong>{total.toLocaleString()}</strong>
               <span>{total === 1 ? " home found" : " homes found"}</span>
@@ -386,7 +386,7 @@ function Properties() {
         {/* LOADING */}
 
         {loading && (
-          <div className="marketplace-status">
+          <div className="marketplace-status" role="status" aria-live="polite">
 
             <div className="loading-spinner" />
 
@@ -414,7 +414,7 @@ function Properties() {
         {/* ERROR */}
 
         {!loading && error && (
-          <div className="marketplace-status error-state">
+          <div className="marketplace-status error-state" role="alert">
 
             <div className="status-icon">
               ⚠️
