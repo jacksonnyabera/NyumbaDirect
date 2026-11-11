@@ -21,7 +21,8 @@ function Navigation() {
   };
 
   return (
-    <header className="site-navigation">\n      <a className="nd-skip-link" href="#main-content">Skip to main content</a>
+    <header className="site-navigation">
+      <a className="nd-skip-link" href="#main-content">Skip to main content</a>
 
       <div className="navigation-inner">
 
@@ -188,7 +189,9 @@ function Navigation() {
           ================================================= */}
 
       <div
-        id="nd-mobile-menu"\n        aria-label="Mobile navigation"\n        className={`nd-mobile-menu ${
+        id="nd-mobile-menu"
+        aria-label="Mobile navigation"
+        className={`nd-mobile-menu ${
           menuOpen ? "open" : ""
         }`}
       >
