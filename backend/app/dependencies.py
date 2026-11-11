@@ -29,6 +29,25 @@ def authentication_error(detail: str):
     )
 
 
+def _token_version_matches(payload: dict, user: User) -> bool:
+    # Tokens issued before versioning existed have no "ver" and count as 0.
+    try:
+        token_ver = int(payload.get("ver", 0))
+    except (TypeError, ValueError):
+        return False
+    return token_ver == (user.token_version or 0)
+
+
+def _load_user(payload: dict, db: Session) -> User | None:
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        return None
+    if user_id <= 0:
+        return None
+    return db.scalar(select(User).where(User.id == user_id))
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -40,32 +59,16 @@ def get_current_user(
             "Invalid or expired authentication token."
         )
 
-    user_id = payload.get("sub")
+    user = _load_user(payload, db)
 
-    if user_id is None:
+    if user is None:
         raise authentication_error(
-            "Invalid authentication token."
+            "Invalid or expired authentication token."
         )
 
-    try:
-        user_id = int(user_id)
-    except (TypeError, ValueError):
+    if not _token_version_matches(payload, user):
         raise authentication_error(
-            "Invalid authentication token."
-        )
-
-    if user_id <= 0:
-        raise authentication_error(
-            "Invalid authentication token."
-        )
-
-    user = db.scalar(
-        select(User).where(User.id == user_id)
-    )
-
-    if not user:
-        raise authentication_error(
-            "User no longer exists."
+            "Your session has ended. Please sign in again."
         )
 
     if not user.is_active:
@@ -85,17 +88,13 @@ def get_optional_current_user(
         return None
 
     payload = decode_access_token(token)
-    user_id = payload.get("sub") if payload else None
-    try:
-        user_id = int(user_id)
-    except (TypeError, ValueError):
+    if not payload:
         return None
 
-    if user_id <= 0:
+    user = _load_user(payload, db)
+    if user is None or not user.is_active or not _token_version_matches(payload, user):
         return None
-
-    user = db.scalar(select(User).where(User.id == user_id))
-    return user if user and user.is_active else None
+    return user
 
 
 def require_role(*allowed_roles: str) -> Callable:

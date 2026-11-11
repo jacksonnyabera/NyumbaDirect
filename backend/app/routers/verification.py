@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.dependencies import get_current_user
 from app.models.user import User
 
@@ -82,6 +83,7 @@ def get_verification_status(
 @router.post(
     "/submit",
     response_model=VerificationStatusResponse,
+    dependencies=[Depends(rate_limit("verification-submit", 10, 3600, per_user=True))],
 )
 def submit_verification(
     data: VerificationSubmit,

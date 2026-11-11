@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.dependencies import get_current_user
 from app.models.property import Property
 from app.models.property_photo import PropertyPhoto
@@ -44,6 +45,7 @@ def _is_supported_image(content_type: str | None, content: bytes) -> bool:
 @router.post(
     "/{property_id}/photos",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("photo-upload", 40, 3600, per_user=True))],
 )
 def upload_property_photo(
     property_id: int,

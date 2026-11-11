@@ -14,6 +14,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.dependencies import get_current_user
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -129,6 +130,7 @@ def _serialize_conversation(conversation: Conversation) -> dict:
 @router.post(
     "/conversations",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("conversation-create", 20, 3600, per_user=True))],
 )
 def create_conversation(
     data: ConversationCreate,
@@ -302,6 +304,7 @@ def get_conversation(
 @router.post(
     "/conversations/{conversation_id}/messages",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("message-send", 30, 300, per_user=True))],
 )
 def send_message(
     conversation_id: int,

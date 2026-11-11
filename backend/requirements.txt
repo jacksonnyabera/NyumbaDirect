@@ -12,3 +12,5 @@ email-validator
 python-multipart
 requests
 cloudinary
+redis>=5.0,<7.0
+Pillow>=10.0

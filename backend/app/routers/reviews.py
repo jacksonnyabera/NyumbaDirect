@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.dependencies import get_current_user
 from app.models.property import Property
 from app.models.conversation import Conversation
@@ -22,6 +23,7 @@ router = APIRouter(
     "/{property_id}",
     response_model=ReviewResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("review-create", 10, 3600, per_user=True))],
 )
 def create_review(
     property_id: int,

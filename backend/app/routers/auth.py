@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -10,6 +11,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.account_verification import AccountVerification
 from app.models.user import User
+from app.rate_limit import check_rate_limit, rate_limit
 from app.schemas.user import (
     TokenResponse,
     UserCreate,
@@ -23,6 +25,8 @@ from app.security import (
     decode_email_verification_token,
     decode_password_reset_token,
     hash_password,
+    reset_token_matches_password,
+    verify_dummy_password,
     verify_password,
 )
 from app.services.account_verification import (
@@ -104,13 +108,23 @@ def _deliver_verification(user: User, method: str, code: str) -> bool:
     return NotificationService.send_verification_code_email(user.email, user.full_name, code)
 
 
+REGISTER_RESPONSE = {
+    "status": "pending_verification",
+    "message": (
+        "If this email and phone number can be used, we have sent a "
+        "verification code. Check your email to finish creating your account."
+    ),
+}
+
+
 @router.post(
     "/register",
-    response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("register", 10, 3600))],
 )
 def register_user(
     user_data: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     email = user_data.email.strip().lower()
@@ -145,19 +159,30 @@ def register_user(
             detail="Invalid registration role.",
         )
 
-    existing_email = db.scalar(select(User).where(User.email == email))
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email is already registered.",
+    existing = db.scalar(
+        select(User).where(
+            (User.email == email) | (User.phone_number == phone_number)
         )
-
-    existing_phone = db.scalar(select(User).where(User.phone_number == phone_number))
-    if existing_phone:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Phone number is already registered.",
-        )
+    )
+    if existing:
+        # Never reveal whether an email or phone number is registered. The
+        # response is identical to a successful sign-up; the real owner of the
+        # address is told by email instead.
+        if existing.email == email:
+            background_tasks.add_task(
+                NotificationService.send_email,
+                existing.email,
+                "Someone tried to create a NyumbaDirect account with your email",
+                (
+                    f"Hi {existing.full_name},\n\n"
+                    "A sign-up was attempted using your email address, but you "
+                    "already have a NyumbaDirect account. You can sign in, or "
+                    "reset your password from the sign-in page if you have "
+                    "forgotten it.\n\nIf this was not you, you can ignore "
+                    "this email.\n\nNyumbaDirect Kenya"
+                ),
+            )
+        return REGISTER_RESPONSE
 
     user = User(
         full_name=full_name,
@@ -170,22 +195,32 @@ def register_user(
     )
 
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Lost a race with a concurrent identical sign-up.
+        db.rollback()
+        return REGISTER_RESPONSE
     db.refresh(user)
 
     challenge, code = _new_challenge(user, "EMAIL", db)
     db.commit()
-    _deliver_verification(user, "EMAIL", code)
+    background_tasks.add_task(_deliver_verification, user, "EMAIL", code)
 
-    return user
+    return REGISTER_RESPONSE
 
 
-@router.post("/verify-signup")
+@router.post(
+    "/verify-signup",
+    dependencies=[Depends(rate_limit("verify-signup", 20, 900))],
+)
 def verify_signup(
     data: VerificationRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     email = str(data.email).strip().lower()
+    check_rate_limit(request, None, "verify-signup-account", 10, 900, subject=f"e:{email}")
     user = db.scalar(select(User).where(User.email == email))
     challenge = (
         db.scalar(select(AccountVerification).where(AccountVerification.user_id == user.id))
@@ -223,12 +258,19 @@ def verify_signup(
     return {"status": "verified", "message": "Your account is verified. You can now sign in."}
 
 
-@router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/resend-verification",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(rate_limit("resend-verification", 10, 3600))],
+)
 def resend_verification(
     data: ResendVerificationRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     email = str(data.email).strip().lower()
+    check_rate_limit(request, None, "resend-verification-account", 3, 3600, subject=f"e:{email}")
     user = db.scalar(select(User).where(User.email == email))
     if user and not user.is_verified and user.is_active:
         existing = db.scalar(
@@ -242,7 +284,7 @@ def resend_verification(
         if not last_sent or (now - last_sent).total_seconds() >= settings.verification_resend_cooldown_seconds:
             _, code = _new_challenge(user, data.method, db)
             db.commit()
-            _deliver_verification(user, data.method, code)
+            background_tasks.add_task(_deliver_verification, user, data.method, code)
 
     return {
         "message": "If this account is awaiting verification, a code has been sent when the requested channel is available."
@@ -252,6 +294,7 @@ def resend_verification(
 @router.get(
     "/verify-email",
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(rate_limit("verify-email", 20, 900))],
 )
 def verify_email(
     token: str = Query(...),
@@ -266,17 +309,12 @@ def verify_email(
         )
 
     email = payload.get("sub")
-    if not email:
+    user = db.scalar(select(User).where(User.email == email)) if email else None
+    if not user:
+        # Same response as a bad token so this cannot be used to probe emails.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification token.",
-        )
-
-    user = db.scalar(select(User).where(User.email == email))
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
+            detail="Invalid or expired verification token.",
         )
 
     user.is_verified = True
@@ -289,16 +327,25 @@ def verify_email(
     }
 
 
-@router.post("/forgot-password")
+@router.post(
+    "/forgot-password",
+    dependencies=[Depends(rate_limit("forgot-password", 10, 3600))],
+)
 def request_password_reset(
     data: PasswordResetRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     email = str(data.email).strip().lower()
+    check_rate_limit(request, None, "forgot-password-account", 3, 3600, subject=f"e:{email}")
     user = db.scalar(select(User).where(User.email == email))
-    if user:
-        token = create_password_reset_token(user.email)
-        NotificationService.send_password_reset_email(
+    if user and user.is_active:
+        token = create_password_reset_token(user.email, user.password_hash)
+        # Sent in the background so response time does not reveal whether the
+        # account exists.
+        background_tasks.add_task(
+            NotificationService.send_password_reset_email,
             to_email=user.email,
             name=user.full_name,
             token=token,
@@ -308,27 +355,35 @@ def request_password_reset(
     }
 
 
-@router.post("/reset-password")
+@router.post(
+    "/reset-password",
+    dependencies=[Depends(rate_limit("reset-password", 10, 900))],
+)
 def reset_password(
     data: PasswordResetConfirm,
     db: Session = Depends(get_db),
 ):
+    invalid = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="This password reset link is invalid or has expired.",
+    )
     payload = decode_password_reset_token(data.token)
     email = payload.get("sub") if payload else None
     if not email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This password reset link is invalid or has expired.",
-        )
+        raise invalid
 
     user = db.scalar(select(User).where(User.email == email))
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This password reset link is invalid or has expired.",
-        )
+    if not user or not user.is_active:
+        raise invalid
+
+    # Single use: the token embeds a fingerprint of the password it was issued
+    # for. After the first successful reset the fingerprint no longer matches.
+    if not reset_token_matches_password(payload, user.password_hash):
+        raise invalid
 
     user.password_hash = hash_password(data.password)
+    # Revoke every access token issued before this reset.
+    user.token_version = (user.token_version or 0) + 1
     db.commit()
     return {"message": "Your password has been updated. You can now sign in."}
 
@@ -336,27 +391,29 @@ def reset_password(
 @router.post(
     "/login",
     response_model=TokenResponse,
+    dependencies=[Depends(rate_limit("login", 30, 600))],
 )
 def login_user(
     login_data: UserLogin,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     email = login_data.email.strip().lower()
+    check_rate_limit(request, None, "login-account", 8, 900, subject=f"e:{email}")
     user = db.scalar(select(User).where(User.email == email))
 
+    invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid email or password.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        verify_dummy_password(login_data.password)
+        raise invalid
 
     if not verify_password(login_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise invalid
 
     if not user.is_active:
         raise HTTPException(
@@ -368,6 +425,7 @@ def login_user(
         data={
             "sub": str(user.id),
             "role": user.role,
+            "ver": user.token_version or 0,
         }
     )
 
