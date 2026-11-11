@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Navigation from "../components/Navigation";
 import { Link, useSearchParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
@@ -161,7 +162,9 @@ function Properties() {
   };
 
   return (
-    <div className="properties-page" id="main-content" tabIndex="-1">
+    <div className="properties-page">
+      <Navigation />
+      <div id="main-content" tabIndex="-1">
 
       <div className="properties-container">
 
@@ -741,6 +744,7 @@ function Properties() {
             </div>
           )}
 
+      </div>
       </div>
     </div>
   );
