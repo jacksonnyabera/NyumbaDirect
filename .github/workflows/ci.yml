@@ -33,8 +33,12 @@ jobs:
       - run: npm run build
 
   backend:
-    name: Backend syntax and migration checks
+    name: Backend tests and migration checks
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      DATABASE_URL: sqlite:///./nyumbadirect-ci.db
+      JWT_SECRET_KEY: ci-only-secret-never-used-in-production
     defaults:
       run:
         working-directory: backend
@@ -48,17 +52,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install pytest
+          python -m pip install -r requirements-dev.txt
       - name: Compile backend and migration modules
-        run: python -m compileall -q app alembic
+        run: python -m compileall -q app alembic tests
       - name: Validate Alembic migration graph
         run: alembic heads
-      - name: Run backend tests when present
-        shell: bash
-        run: |
-          if [ -d tests ] && find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
-            python -m pytest -q
-          else
-            echo "::notice::No backend pytest suite exists yet; syntax and migration graph checks were run."
-          fi
+      - name: Run backend tests
+        run: python -m pytest -q
