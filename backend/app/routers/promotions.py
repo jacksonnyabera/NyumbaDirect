@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.dependencies import get_current_user
 from app.models.property import Property
 from app.models.property_promotion import PropertyPromotion
@@ -39,6 +40,7 @@ PACKAGES = {
     "",
     response_model=PromotionResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("promotion-create", 20, 3600, per_user=True))],
 )
 def create_promotion(
     data: PromotionCreate,

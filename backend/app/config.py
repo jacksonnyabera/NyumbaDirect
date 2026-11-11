@@ -18,6 +18,29 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    # Issuer/audience are written into every new token. Tokens issued before
+    # this change lack them; they are accepted until they expire unless
+    # JWT_REQUIRE_CLAIMS=true (safe to enable ~1 hour after deploying).
+    jwt_issuer: str = "nyumbadirect-api"
+    jwt_audience: str = "nyumbadirect-web"
+    jwt_require_claims: bool = False
+    password_reset_ttl_minutes: int = 30
+
+    # Rate limiting. REDIS_URL enables distributed limits shared by every
+    # Render instance. Without it, a per-process fallback is used, which is NOT
+    # distributed protection (each instance counts separately).
+    redis_url: str = ""
+    rate_limit_enabled: bool = True
+    # Number of trusted reverse proxies in front of the app. The client IP is
+    # taken from the Nth-from-right X-Forwarded-For entry, so a client cannot
+    # spoof it by sending its own header. 0 = ignore X-Forwarded-For entirely.
+    trusted_proxy_count: int = 1
+
+    # Comma-separated extra CORS origins (the production and local dev origins
+    # are always allowed).
+    cors_extra_origins: str = ""
+    # Reject request bodies larger than this (bytes) before they are read.
+    max_request_body_bytes: int = 12 * 1024 * 1024
     public_api_url: str = ""
     database_pool_size: int = 5
     database_max_overflow: int = 10
@@ -73,6 +96,9 @@ class Settings(BaseSettings):
     mpesa_callback_url: str = ""
     mpesa_callback_secret: str = ""
     mpesa_environment: str = "sandbox"
+    # Ask Safaricom (STK Push Query) to confirm a successful callback before
+    # activating a paid boost. Requires working Daraja credentials.
+    mpesa_verify_callbacks: bool = True
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = ""

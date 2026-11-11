@@ -7,6 +7,7 @@ from sqlalchemy import case, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.models.property import Property
 
 
@@ -28,7 +29,10 @@ def _rent_amount(match: re.Match[str] | None) -> int | None:
     return int(amount)
 
 
-@router.post("/chat")
+@router.post(
+    "/chat",
+    dependencies=[Depends(rate_limit("assistant", 20, 300))],
+)
 def ask_assistant(data: AssistantQuestion, db: Session = Depends(get_db)):
     question = data.question.strip()
     lower = question.lower()

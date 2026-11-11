@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.dependencies import (
     get_current_user,
     get_optional_current_user,
@@ -43,6 +44,7 @@ router = APIRouter(
     "",
     response_model=PropertyResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("property-create", 20, 3600, per_user=True))],
 )
 def create_property(
     data: PropertyCreate,
@@ -344,6 +346,7 @@ def get_property(
     "/{property_id}/view",
     response_model=PropertyViewResponse,
     status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(rate_limit("property-view", 120, 300))],
 )
 def record_property_view(
     property_id: int,

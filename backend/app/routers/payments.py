@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.config import settings
 from app.dependencies import get_current_user
 from app.models.property import Property
@@ -34,7 +35,10 @@ class STKPushRequest(BaseModel):
     phone_number: str
 
 
-@router.post("/mpesa/stk-push")
+@router.post(
+    "/mpesa/stk-push",
+    dependencies=[Depends(rate_limit("stk-push", 5, 3600, per_user=True))],
+)
 def mpesa_stk_push(
     data: STKPushRequest,
     db: Session = Depends(get_db),
@@ -399,7 +403,10 @@ def mpesa_callback(
         "ResultDesc": "Callback received successfully.",
     }
 
-@router.get("/mpesa/status/{promotion_id}")
+@router.get(
+    "/mpesa/status/{promotion_id}",
+    dependencies=[Depends(rate_limit("stk-status", 60, 300, per_user=True))],
+)
 def mpesa_payment_status(
     promotion_id: int,
     db: Session = Depends(get_db),
