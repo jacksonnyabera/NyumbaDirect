@@ -4,8 +4,8 @@
   "description": "Kenyan housing marketplace for finding homes directly from landlords and property managers.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#eef6f1",
-  "theme_color": "#0f766e",
+  "background_color": "#FFFFFF",
+  "theme_color": "#173B57",
   "icons": [
     {
       "src": "/favicon.svg",
