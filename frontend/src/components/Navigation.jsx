@@ -173,6 +173,7 @@ function Navigation() {
           }
           aria-label="Toggle navigation menu"
           aria-expanded={menuOpen}
+          aria-controls="nd-mobile-menu"
         >
 
           <span></span>
@@ -190,6 +191,7 @@ function Navigation() {
 
       <div
         id="nd-mobile-menu"
+        role="navigation"
         aria-label="Mobile navigation"
         className={`nd-mobile-menu ${
           menuOpen ? "open" : ""
