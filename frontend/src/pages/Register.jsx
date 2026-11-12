@@ -134,7 +134,7 @@ function Register() {
           </div>
 
           <div className="auth-form-note">
-            Your account will be created immediately. You can verify your profile later from your account settings.
+            We will email you a verification code to confirm your address. Check your inbox (and spam folder) after you sign up.
           </div>
 
           <div className="form-grid">

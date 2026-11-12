@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import api, { API_BASE_URL } from "../services/api";
 
 function EditProperty() {
@@ -297,23 +298,9 @@ function EditProperty() {
   return (
     <div className="add-property-page">
 
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
-        </Link>
+      <Navigation />
 
-        <div className="nav-links">
-          <Link to="/dashboard">
-            Dashboard
-          </Link>
-
-          <Link to="/properties">
-            Properties
-          </Link>
-        </div>
-      </nav>
-
-      <main className="add-property-container">
+      <main id="main-content" tabIndex="-1" className="add-property-container">
 
         <div className="form-header">
 
