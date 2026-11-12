@@ -360,7 +360,7 @@ const formatDate = (dateString) => {
                       )}
                     </div>
 
-                    <div className="conversation-arrow">→</div>
+                    <div className="conversation-arrow"><Icon name="forward" /></div>
                   </Link>
                 );
               })}

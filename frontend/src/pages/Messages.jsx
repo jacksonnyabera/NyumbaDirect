@@ -329,7 +329,7 @@ function Messages() {
               to="/messages"
               className="back-link"
             >
-             ← Back to messages
+             <Icon name="back" /> Back to messages
             </Link>
 
             <span className="messages-eyebrow">

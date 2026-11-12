@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 const SECTIONS = [
   { id: "overview", label: "Overview", marker: "OV" },
@@ -446,7 +447,7 @@ function AdminDashboard() {
       <section className="admin-workspace">
         <header className="admin-topbar">
           <div><span>NyumbaDirect admin</span><h1>{sectionLabel}</h1></div>
-          <div className="admin-topbar-actions"><Link to="/" target="_blank" rel="noreferrer">View marketplace ↗</Link><button type="button" onClick={refresh} disabled={loading}>{loading ? "Refreshing…" : "Refresh data"}</button></div>
+          <div className="admin-topbar-actions"><Link to="/" target="_blank" rel="noreferrer">View marketplace </Link><button type="button" onClick={refresh} disabled={loading}>{loading ? "Refreshing…" : "Refresh data"}</button></div>
         </header>
 
         {hasList && (

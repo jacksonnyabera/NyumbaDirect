@@ -59,7 +59,6 @@ function HomePropertyCard({ property, boosted }) {
       <div className="home-listing-content">
         <div className="home-listing-title-row">
           <h3>{property.title}</h3>
-          <span aria-hidden="true">↗</span>
         </div>
         <p className="home-listing-location">{location || "Location not provided"}</p>
         <div className="home-listing-facts">
@@ -155,7 +154,7 @@ function Home() {
                 placeholder="Town or area, e.g. Kilimani"
                 autoComplete="off"
               />
-              <button type="submit" className="search-btn">Search homes <span aria-hidden="true">→</span></button>
+              <button type="submit" className="search-btn">Search homes</button>
             </form>
 
             <div className="hero-actions">
@@ -186,7 +185,7 @@ function Home() {
                 <h2 id="home-inventory-title">Find your next place</h2>
                 <p>Compare real listings by location, layout and monthly rent.</p>
               </div>
-              <Link to="/properties" className="home-inventory-link">Browse all homes <span aria-hidden="true">→</span></Link>
+              <Link to="/properties" className="home-inventory-link">Browse all homes</Link>
             </div>
 
             <p className="home-inventory-note">
@@ -235,14 +234,14 @@ function Home() {
               <div className="home-listing-state">
                 <h3>No homes listed just yet</h3>
                 <p>Check back soon, or browse all listings to explore what is available.</p>
-                <Link to="/properties" className="home-inventory-link">Browse homes <span aria-hidden="true">→</span></Link>
+                <Link to="/properties" className="home-inventory-link">Browse homes</Link>
               </div>
             )}
 
             {inventoryState === "unavailable" && (
               <div className="home-listing-state" role="status">
                 Listings are temporarily unavailable. You can still open the full property search.
-                <Link to="/properties" className="home-inventory-link">Open property search <span aria-hidden="true">→</span></Link>
+                <Link to="/properties" className="home-inventory-link">Open property search</Link>
               </div>
             )}
           </div>
@@ -442,7 +441,7 @@ function Home() {
               >
                 Explore Nairobi
                 <span>
-                  →
+                  <Icon name="forward" />
                 </span>
               </Link>
 
@@ -469,7 +468,7 @@ function Home() {
               >
                 Explore Mombasa
                 <span>
-                  →
+                  <Icon name="forward" />
                 </span>
               </Link>
 
@@ -496,7 +495,7 @@ function Home() {
               >
                 Explore Kisumu
                 <span>
-                  →
+                  <Icon name="forward" />
                 </span>
               </Link>
 
@@ -640,7 +639,7 @@ function Home() {
             to="/properties"
             className="search-btn"
           >
-            Explore Properties →
+            Explore Properties
           </Link>
 
         </section>
@@ -1503,7 +1502,7 @@ function AIHelpAssistant() {
                         <strong>{property.title}</strong>
                         <span>{[property.area, property.town, property.county].filter(Boolean).join(", ")}</span>
                         <span>KSh {Number(property.monthly_rent).toLocaleString()} / month</span>
-                        <small>{getBedroomDisplay(property).summary} · View details →</small>
+                        <small>{getBedroomDisplay(property).summary} · View details</small>
                         {property.is_verified && <small className="ai-help-verified"><Icon name="check" /> Verified listing</small>}
                       </Link>
                     ))}

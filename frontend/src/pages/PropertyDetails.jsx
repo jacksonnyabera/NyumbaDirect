@@ -327,7 +327,7 @@ function PropertyDetails() {
               to="/properties"
               className="details-primary-button"
             >
-              ← Back to properties
+              <Icon name="back" /> Back to properties
             </Link>
           </div>
         </div>
@@ -357,7 +357,7 @@ function PropertyDetails() {
               to="/properties"
               className="details-primary-button"
             >
-              ← Browse properties
+              <Icon name="back" /> Browse properties
             </Link>
           </div>
         </div>
@@ -409,7 +409,7 @@ function PropertyDetails() {
             to="/properties"
             className="details-back-link"
           >
-            ← Back to properties
+            <Icon name="back" /> Back to properties
           </Link>
 
           <button

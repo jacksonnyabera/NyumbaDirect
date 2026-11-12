@@ -466,7 +466,7 @@ function Dashboard() {
               </div>
 
               <span className="dashboard-action-arrow">
-                →
+                <Icon name="forward" />
               </span>
             </Link>
 
@@ -489,7 +489,7 @@ function Dashboard() {
               </div>
 
               <span className="dashboard-action-arrow">
-                →
+                <Icon name="forward" />
               </span>
             </Link>
 
@@ -513,7 +513,7 @@ function Dashboard() {
                 </div>
 
                 <span className="dashboard-action-arrow">
-                  →
+                  <Icon name="forward" />
                 </span>
               </Link>
             )}
@@ -790,7 +790,7 @@ function Dashboard() {
               to="/messages"
               className="dashboard-section-link"
             >
-              View All →
+              View All
             </Link>
           </div>
 
@@ -862,7 +862,7 @@ function Dashboard() {
                         </span>
 
                         <strong>
-                          →
+                          <Icon name="forward" />
                         </strong>
                       </div>
                     </Link>
@@ -1061,7 +1061,7 @@ function Dashboard() {
             to="/"
             className="dashboard-account-link"
           >
-            Back to Home →
+            Back to Home
           </Link>
         </section>
       </main>

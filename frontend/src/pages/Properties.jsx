@@ -645,7 +645,7 @@ function Properties() {
                           className="view-home-button"
                         >
                           View Home
-                          <span>→</span>
+                          <span><Icon name="forward" /></span>
                         </Link>
 
                       </div>

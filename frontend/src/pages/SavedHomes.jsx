@@ -312,7 +312,7 @@ function SavedHomes() {
                           to={`/properties/${property.id}`}
                           className="saved-view-button"
                         >
-                          View Home →
+                          View Home
                         </Link>
 
                       </div>

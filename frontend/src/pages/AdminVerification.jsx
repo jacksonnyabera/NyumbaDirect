@@ -129,7 +129,7 @@ function AdminVerification() {
             to="/dashboard"
             className="admin-back-button"
           >
-            ← Dashboard
+            <Icon name="back" /> Dashboard
           </Link>
 
         </div>

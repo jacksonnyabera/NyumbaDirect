@@ -412,7 +412,7 @@ function BoostProperty() {
             to="/dashboard"
             className="boost-back-link"
           >
-            ← Dashboard
+            <Icon name="back" /> Dashboard
           </Link>
 
           <span className="boost-brand">
