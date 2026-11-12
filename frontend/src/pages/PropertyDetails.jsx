@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
 import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
+import Icon from "../components/Icon.jsx";
+import Navigation from "../components/Navigation.jsx";
 
 function upsertMeta(selector, attributes, content) {
   let element = document.head.querySelector(selector);
@@ -312,7 +314,7 @@ function PropertyDetails() {
         <div className="property-details-container">
           <div className="details-status-page">
             <div className="details-status-icon">
-              ⚠️
+              <Icon name="warning" />
             </div>
 
             <h2>
@@ -325,7 +327,7 @@ function PropertyDetails() {
               to="/properties"
               className="details-primary-button"
             >
-              ← Back to properties
+              <Icon name="back" /> Back to properties
             </Link>
           </div>
         </div>
@@ -339,7 +341,7 @@ function PropertyDetails() {
         <div className="property-details-container">
           <div className="details-status-page">
             <div className="details-status-icon">
-              🏠
+              <Icon name="home" />
             </div>
 
             <h2>
@@ -355,7 +357,7 @@ function PropertyDetails() {
               to="/properties"
               className="details-primary-button"
             >
-              ← Browse properties
+              <Icon name="back" /> Browse properties
             </Link>
           </div>
         </div>
@@ -377,11 +379,15 @@ function PropertyDetails() {
     property.owner?.role ||
     "PROPERTY OWNER";
 
-  const locationParts = [
-    property.area,
-    property.town,
-    property.county,
-  ].filter(Boolean);
+  const seenPlaces = new Set();
+  const locationParts = [property.area, property.town, property.county]
+    .filter(Boolean)
+    .filter((part) => {
+      const key = String(part).trim().toLowerCase();
+      if (seenPlaces.has(key)) return false;
+      seenPlaces.add(key);
+      return true;
+    });
 
   const locationText =
     locationParts.length > 0
@@ -389,6 +395,8 @@ function PropertyDetails() {
       : "Location available on request";
 
   return (
+    <>
+    <Navigation />
     <div className="property-details-page">
 
       <div className="property-details-container">
@@ -401,7 +409,7 @@ function PropertyDetails() {
             to="/properties"
             className="details-back-link"
           >
-            ← Back to properties
+            <Icon name="back" /> Back to properties
           </Link>
 
           <button
@@ -414,7 +422,7 @@ function PropertyDetails() {
             onClick={() => toggleFavorite(propertyId)}
           >
             <span>
-              {isFavorite ? "♥" : "♡"}
+              <Icon name="heart" filled={isFavorite} />
             </span>
 
             {isFavorite
@@ -442,7 +450,7 @@ function PropertyDetails() {
               />
             ) : (
               <div className="details-image-placeholder">
-                <span>🏡</span>
+                <span><Icon name="home" /></span>
                 <strong>
                   No photos added yet
                 </strong>
@@ -456,13 +464,13 @@ function PropertyDetails() {
 
               {isPropertyBoostActive(property) && (
                 <span className="details-featured-badge">
-                  ★ Featured listing
+                  <Icon name="star" filled /> Featured listing
                 </span>
               )}
 
               {property.is_verified && (
                 <span className="details-verified-badge">
-                  ✓ Verified property
+                  <Icon name="check" /> Verified property
                 </span>
               )}
 
@@ -476,7 +484,7 @@ function PropertyDetails() {
 
             {photos.length > 1 && (
               <div className="details-photo-count">
-                📷 {photos.length} photos
+                <Icon name="camera" /> {photos.length} photos
               </div>
             )}
 
@@ -512,7 +520,7 @@ function PropertyDetails() {
                         }
                       />
                     ) : (
-                      <span>🏡</span>
+                      <span><Icon name="home" /></span>
                     )}
                   </button>
                 );
@@ -527,7 +535,7 @@ function PropertyDetails() {
 
         <div className="details-layout">
 
-          <main className="details-main-content">
+          <main className="details-main-content" id="main-content" tabIndex="-1">
 
             {/* TITLE */}
 
@@ -548,30 +556,12 @@ function PropertyDetails() {
                   </h1>
 
                   <p className="details-location">
-                    📍 {locationText}
+                    <Icon name="pin" /> {locationText}
                   </p>
 
                 </div>
 
-                <div className="details-status-badges">
-
-                  {property.is_verified && (
-                    <span className="details-inline-verified">
-                      ✓ Verified
-                    </span>
-                  )}
-
-                  {property.is_available ? (
-                    <span className="details-inline-available">
-                      Available
-                    </span>
-                  ) : (
-                    <span className="details-inline-unavailable">
-                      Not available
-                    </span>
-                  )}
-
-                </div>
+                
 
               </div>
 
@@ -584,7 +574,7 @@ function PropertyDetails() {
               <div className="details-fact">
 
                 <span className="details-fact-icon">
-                  🛏
+                  <Icon name="bed" />
                 </span>
 
                 <div>
@@ -600,7 +590,7 @@ function PropertyDetails() {
               <div className="details-fact">
 
                 <span className="details-fact-icon">
-                  🚿
+                  <Icon name="bath" />
                 </span>
 
                 <div>
@@ -618,7 +608,7 @@ function PropertyDetails() {
               <div className="details-fact">
 
                 <span className="details-fact-icon">
-                  🏠
+                  <Icon name="home" />
                 </span>
 
                 <div>
@@ -638,7 +628,7 @@ function PropertyDetails() {
               <div className="details-fact">
 
                 <span className="details-fact-icon">
-                  📍
+                  <Icon name="pin" />
                 </span>
 
                 <div>
@@ -683,7 +673,7 @@ function PropertyDetails() {
               <div className="details-location-box">
 
                 <div className="details-location-icon">
-                  📍
+                  <Icon name="pin" />
                 </div>
 
                 <div>
@@ -765,7 +755,7 @@ function PropertyDetails() {
             <section className="details-trust-section">
 
               <div className="trust-section-heading">
-                <span>🛡️</span>
+                <span><Icon name="shield" /></span>
 
                 <div>
                   <h2>
@@ -783,7 +773,7 @@ function PropertyDetails() {
 
                 <div>
                   <strong>
-                    ✓ Check the property
+                    <Icon name="check" /> Check the property
                   </strong>
 
                   <p>
@@ -794,7 +784,7 @@ function PropertyDetails() {
 
                 <div>
                   <strong>
-                    ✓ Communicate directly
+                    <Icon name="check" /> Communicate directly
                   </strong>
 
                   <p>
@@ -805,7 +795,7 @@ function PropertyDetails() {
 
                 <div>
                   <strong>
-                    ✓ Verify before paying
+                    <Icon name="check" /> Verify before paying
                   </strong>
 
                   <p>
@@ -841,7 +831,7 @@ function PropertyDetails() {
                         <div>
                           <strong>House hunter</strong>
                           <span className="details-review-stars" aria-label={`${review.rating} out of 5 stars`}>
-                            {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                            {[1, 2, 3, 4, 5].map((n) => (<Icon key={n} name="star" filled={n <= review.rating} />))}
                           </span>
                         </div>
                         <time dateTime={review.created_at}>
@@ -960,7 +950,7 @@ function PropertyDetails() {
                 {contacting
                   ? "Opening conversation..."
                   : property.is_available
-                  ? "💬 Contact landlord"
+                  ? "Contact landlord"
                   : "Property unavailable"}
               </button>
 
@@ -983,7 +973,7 @@ function PropertyDetails() {
                 <div className="details-owner">
 
                   <div className="details-owner-avatar">
-                    👤
+                    <Icon name="user" />
                   </div>
 
                   <div>
@@ -998,7 +988,7 @@ function PropertyDetails() {
 
                     {property.owner.is_verified && (
                       <small>
-                        ✓ Verified account
+                        <Icon name="check" /> Verified account
                       </small>
                     )}
 
@@ -1014,7 +1004,7 @@ function PropertyDetails() {
             <div className="details-safety-card">
 
               <div className="details-safety-icon">
-                🔒
+                <Icon name="lock" />
               </div>
 
               <div>
@@ -1039,6 +1029,7 @@ function PropertyDetails() {
 
       </div>
     </div>
+    </>
   );
 }
 

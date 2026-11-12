@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 function Register() {
   const [searchParams] = useSearchParams();
@@ -206,7 +207,7 @@ function Register() {
         </p>
 
         <Link className="auth-back" to="/">
-          ← Back to home
+          <Icon name="back" /> Back to home
         </Link>
       </div>
     </div>

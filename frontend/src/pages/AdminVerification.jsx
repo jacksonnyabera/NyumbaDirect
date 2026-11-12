@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 function AdminVerification() {
   const navigate = useNavigate();
@@ -128,7 +129,7 @@ function AdminVerification() {
             to="/dashboard"
             className="admin-back-button"
           >
-            ← Dashboard
+            <Icon name="back" /> Dashboard
           </Link>
 
         </div>
@@ -156,7 +157,7 @@ function AdminVerification() {
           <div className="admin-verification-empty">
 
             <div className="admin-empty-icon">
-              ✓
+              <Icon name="check" />
             </div>
 
             <h2>
@@ -272,7 +273,7 @@ function AdminVerification() {
                     {actionLoading ===
                     `approve-${user.id}`
                       ? "Approving..."
-                      : "✓ Approve"}
+                      : "Approve"}
                   </button>
 
                   <button

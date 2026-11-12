@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 const PACKAGES = [
   {
@@ -10,7 +11,7 @@ const PACKAGES = [
     amount: 300,
     offer: "Try a short promotion with the lowest upfront cost.",
     bestFor: "New listings and short-term availability",
-    tag: "LOWEST UPFRONT",
+    tag: "Lowest upfront",
   },
   {
     key: "14_DAYS",
@@ -28,7 +29,7 @@ const PACKAGES = [
     amount: 1500,
     offer: "Keep your property promoted for a full month.",
     bestFor: "Listings that need more time on the market",
-    tag: "LONGEST BOOST",
+    tag: "Longest boost",
   },
 ];
 
@@ -382,7 +383,7 @@ function BoostProperty() {
       <div className="boost-page">
         <div className="boost-shell boost-error-state">
           <span className="boost-icon">
-            ⚠️
+            <Icon name="warning" />
           </span>
 
           <h1>
@@ -411,7 +412,7 @@ function BoostProperty() {
             to="/dashboard"
             className="boost-back-link"
           >
-            ← Dashboard
+            <Icon name="back" /> Dashboard
           </Link>
 
           <span className="boost-brand">
@@ -421,7 +422,7 @@ function BoostProperty() {
 
         <section className="boost-header">
           <span className="boost-eyebrow">
-            PROPERTY PROMOTION
+            Property promotion
           </span>
 
           <h1>
@@ -438,7 +439,7 @@ function BoostProperty() {
         <section className="boost-property-card">
           <div>
             <span className="boost-property-label">
-              SELECTED PROPERTY
+              Selected property
             </span>
 
             <h2>
@@ -475,7 +476,7 @@ function BoostProperty() {
 
         {message && (
           <div className={`boost-alert ${paymentStatus === "PAID" ? "boost-alert-success" : "boost-alert-pending"}`} role="status">
-            {paymentStatus === "PAID" ? "✓ " : paymentStatus === "PENDING" ? "⌛ " : ""}{message}
+            {paymentStatus === "PAID" ? <Icon name="check" /> : paymentStatus === "PENDING" ? <Icon name="clock" /> : null} {message}
           </div>
         )}
 
@@ -514,7 +515,7 @@ function BoostProperty() {
 
                 <span className="boost-package-tag">{item.tag}</span>
                 <span className={`boost-package-check ${selected ? "is-selected" : ""}`} aria-hidden="true">
-                  {selected ? "✓" : ""}
+                  {selected ? <Icon name="check" /> : null}
                 </span>
 
                 <span className="boost-package-title">{item.title}</span>

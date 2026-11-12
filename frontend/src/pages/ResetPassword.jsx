@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -58,7 +59,7 @@ export default function ResetPassword() {
             </button>
           </form>
         )}
-        <Link className="auth-back" to="/login">← Back to login</Link>
+        <Link className="auth-back" to="/login"><Icon name="back" /> Back to login</Link>
       </section>
     </main>
   );
