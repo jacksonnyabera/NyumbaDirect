@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
 import { getBedroomDisplay } from "../utils/propertyDisplay";
@@ -9,7 +10,6 @@ function SavedHomes() {
   const [loading, setLoading] = useState(true);
   const { favoriteIds, toggleFavorite, clearFavorites, error: favoritesError } = useFavorites();
 
-  const navigate = useNavigate();
 
   const loadSavedHomes = useCallback(async () => {
     try {
@@ -120,57 +120,13 @@ function SavedHomes() {
       : "Location not specified";
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(
-      "access_token"
-    );
-
-    localStorage.removeItem("user_id");
-
-    navigate("/login");
-  };
 
   return (
     <div className="saved-homes-page">
 
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
-        </Link>
+      <Navigation />
 
-        <div className="nav-links">
-          <Link to="/">Home</Link>
-
-          <Link to="/properties">
-            Properties
-          </Link>
-
-          <Link to="/dashboard">
-            Dashboard
-          </Link>
-
-          <Link
-            to="/saved-homes"
-            className="active-nav-link"
-          >
-            Saved Homes
-          </Link>
-
-          <Link to="/messages">
-            Messages
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="logout-btn"
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
-
-      <main className="saved-homes-container">
+      <main id="main-content" tabIndex="-1" className="saved-homes-container">
 
         <section className="saved-homes-header">
 

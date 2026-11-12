@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import api, { API_BASE_URL } from "../services/api";
 import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
 
@@ -102,11 +103,6 @@ function Dashboard() {
     loadDashboard();
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user_id");
-    navigate("/login");
-  };
 
   const handleDelete = async (propertyId) => {
     const confirmed = window.confirm(
@@ -246,40 +242,9 @@ function Dashboard() {
     <>
       <div className="dashboard-page">
       {/* NAVIGATION */}
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
-        </Link>
+      <Navigation />
 
-        <div className="nav-links">
-          <Link to="/">Home</Link>
-
-          <Link to="/properties">
-            Properties
-          </Link>
-
-          <Link
-            to="/dashboard"
-            className="active-nav-link"
-          >
-            Dashboard
-          </Link>
-
-          <Link to="/messages">
-            Messages
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="logout-btn"
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
-
-      <main className="dashboard-container">
+      <main id="main-content" tabIndex="-1" className="dashboard-container">
         {/* HEADER */}
         <section className="dashboard-hero">
           <div className="dashboard-hero-content">

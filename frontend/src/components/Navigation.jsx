@@ -12,6 +12,7 @@ function Navigation() {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
+    localStorage.removeItem("user_id");
     setMenuOpen(false);
     navigate("/login");
   };

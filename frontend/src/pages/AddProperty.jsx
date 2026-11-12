@@ -1,5 +1,6 @@
 ﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import api from "../services/api";
 
 function AddProperty() {
@@ -166,18 +167,9 @@ function AddProperty() {
   return (
     <div className="add-property-page">
 
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
-        </Link>
+      <Navigation />
 
-        <div className="nav-links">
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/properties">Properties</Link>
-        </div>
-      </nav>
-
-      <main className="add-property-container">
+      <main id="main-content" tabIndex="-1" className="add-property-container">
 
         <div className="form-header">
           <p className="eyebrow">NYUMBADIRECT · LANDLORD LISTINGS</p>

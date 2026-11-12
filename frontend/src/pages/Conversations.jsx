@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import api from "../services/api";
 
 function Conversations() {
@@ -122,12 +123,6 @@ function Conversations() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
 
   const isLandlord =
     user?.role?.toUpperCase() === "LANDLORD" ||
@@ -228,34 +223,9 @@ const formatDate = (dateString) => {
   }
  return (
     <div className="conversations-page">
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
-        </Link>
+      <Navigation />
 
-        <div className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="/properties">Properties</Link>
-          <Link to="/dashboard">Dashboard</Link>
-
-          <Link
-            to="/messages"
-            className="active-nav-link"
-          >
-            Messages
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="logout-btn"
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
-
-      <main className="conversations-container">
+      <main id="main-content" tabIndex="-1" className="conversations-container">
         <section className="conversations-header">
           <div>
             <span className="section-label">COMMUNICATION</span>

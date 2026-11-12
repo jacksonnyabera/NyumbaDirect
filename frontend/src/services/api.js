@@ -27,4 +27,19 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 429) {
+      const wait = Number(error.response.headers?.["retry-after"]);
+      const when = wait > 0 ? ` Please try again in about ${Math.ceil(wait / 60) || 1} minute(s).` : " Please wait a moment and try again.";
+      error.response.data = {
+        ...(typeof error.response.data === "object" ? error.response.data : {}),
+        detail: `You are doing that too quickly.${when}`,
+      };
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

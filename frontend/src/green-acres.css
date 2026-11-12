@@ -512,3 +512,56 @@
 .city-card:not(.city-card-dark) p {
   color: var(--ga-navy);
 }
+
+/* ---------- Property card badges ----------
+   An older rule positions every .verified-badge absolutely, which collapsed the
+   badge row to zero width ("V e r i f i e d"). Inside .card-badges the badges
+   are ordinary flex items. */
+
+.card-badges {
+  right: 60px; /* keep clear of the save (heart) button */
+  max-width: calc(100% - 73px);
+}
+
+.card-badges .verified-badge,
+.card-badges .featured-badge,
+.card-badges .unavailable-badge {
+  position: static;
+  white-space: nowrap;
+}
+
+/* ---------- Touch targets (44px minimum) ---------- */
+
+.dashboard-section-link,
+.dashboard-property-reviews-link,
+.dashboard-account-link,
+.property-view-action,
+.property-edit-action,
+.details-back-link,
+.favorite-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-button {
+  min-width: 44px;
+}
+
+.dashboard-property-reviews-link,
+.dashboard-account-link,
+.details-back-link {
+  padding-block: 10px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--ga-green);
+}
+
+.nd-brand {
+  min-height: 44px;
+}
