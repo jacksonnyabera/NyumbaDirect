@@ -99,6 +99,10 @@ class Settings(BaseSettings):
     # Ask Safaricom (STK Push Query) to confirm a successful callback before
     # activating a paid boost. Requires working Daraja credentials.
     mpesa_verify_callbacks: bool = True
+    # Optional comma-separated list of source IPs allowed to call the callback
+    # endpoint. Empty = no IP filtering. Fill it only with addresses published
+    # by Safaricom; they are not hardcoded here.
+    mpesa_callback_allowed_ips: str = ""
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = ""

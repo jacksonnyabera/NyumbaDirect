@@ -7,6 +7,10 @@ import requests
 from app.config import settings
 
 
+class MpesaQueryUnavailableError(RuntimeError):
+    """Safaricom could not give a definite answer to a transaction query."""
+
+
 class MpesaInitiationUncertainError(RuntimeError):
     """The STK request may have reached Safaricom, but no response arrived."""
 
@@ -27,7 +31,7 @@ def get_access_token() -> str:
             settings.mpesa_consumer_key,
             settings.mpesa_consumer_secret,
         ),
-        timeout=30,
+        timeout=(5, 20),
     )
 
     response.raise_for_status()
@@ -99,7 +103,7 @@ def initiate_stk_push(
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json",
             },
-            timeout=30,
+            timeout=(5, 25),
         )
     except requests.RequestException as exc:
         # A transport failure does not prove Safaricom rejected the request.
@@ -122,3 +126,47 @@ def initiate_stk_push(
         raise MpesaInitiationUncertainError(
             "Safaricom returned an unreadable response after the request was submitted."
         ) from exc
+
+
+
+def query_stk_status(checkout_request_id: str) -> dict:
+    """Ask Safaricom (STK Push Query) what happened to a checkout request.
+
+    Returns the decoded response only when it contains a definite ``ResultCode``
+    for the same ``CheckoutRequestID``. Anything else (network failure, rate
+    limiting, "still processing", unreadable or unrelated answer) raises
+    ``MpesaQueryUnavailableError`` so the caller leaves the payment pending
+    instead of guessing.
+
+    Note: this endpoint confirms the outcome of a checkout request. It does not
+    return the paid amount or the M-Pesa receipt number.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    try:
+        access_token = get_access_token()
+        response = requests.post(
+            f"{get_mpesa_base_url()}/mpesa/stkpushquery/v1/query",
+            json={
+                "BusinessShortCode": settings.mpesa_shortcode,
+                "Password": generate_password(timestamp),
+                "Timestamp": timestamp,
+                "CheckoutRequestID": checkout_request_id,
+            },
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            timeout=(5, 20),
+        )
+        data = response.json()
+    except (requests.RequestException, ValueError, KeyError) as exc:
+        raise MpesaQueryUnavailableError(type(exc).__name__) from exc
+
+    if (
+        not isinstance(data, dict)
+        or data.get("ResultCode") is None
+        or str(data.get("CheckoutRequestID", "")) != checkout_request_id
+    ):
+        raise MpesaQueryUnavailableError("no definite result")
+
+    return data

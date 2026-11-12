@@ -1,3 +1,4 @@
+import logging
 import os
 from fastapi import FastAPI
 from fastapi import Request
@@ -5,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
+from app import log_redaction
 from app.rate_limit import warn_if_not_distributed
 from app.routers import auth
 from app.routers import properties
@@ -176,6 +178,13 @@ async def add_security_headers(request: Request, call_next):
 
 
 warn_if_not_distributed()
+log_redaction.install()
+
+if is_production and not settings.mpesa_verify_callbacks:
+    logging.getLogger(__name__).warning(
+        "MPESA_VERIFY_CALLBACKS is off in production: boosts are activated from "
+        "unconfirmed callbacks. Turn it on."
+    )
 
 app.include_router(health.router)
 app.include_router(auth.router)
