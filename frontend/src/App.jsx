@@ -22,6 +22,7 @@ const Messages = lazy(() => import("./pages/Messages"));
 const SavedHomes = lazy(() => import("./pages/SavedHomes"));
 const BoostProperty = lazy(() => import("./pages/BoostProperty"));
 import Navigation from "./components/Navigation";
+import HeroMap from "./components/HeroMap";
 const AdminVerification = lazy(() => import("./pages/AdminVerification"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -76,7 +77,6 @@ function HomePropertyCard({ property, boosted }) {
 
 function Home() {
   const [listingStats, setListingStats] = useState({ available: null, verified: null });
-  const [featuredProperty, setFeaturedProperty] = useState(null);
   const [boostedHomes, setBoostedHomes] = useState([]);
   const [regularHomes, setRegularHomes] = useState([]);
   const [inventoryState, setInventoryState] = useState("loading");
@@ -101,7 +101,6 @@ function Home() {
             available: (boosted.data?.total ?? 0) + (regular.data?.total ?? 0),
             verified: verified.data?.total ?? 0,
           });
-          setFeaturedProperty(item);
           setInventoryState(item ? "available" : "empty");
         }
       })
@@ -128,37 +127,31 @@ function Home() {
             HERO
             ================================================= */}
 
-        <section className="hero">
+        <section className="hero ga-hero" aria-labelledby="home-hero-title">
 
-          <div className="hero-content">
-
-            <div className="hero-badge">
-              <span aria-hidden="true">N</span>
-              Rental homes across Kenya
-            </div>
+          <div className="hero-content ga-hero-copy">
 
             <p className="eyebrow">
-              A CLEARER WAY TO RENT
+              RENTAL HOMES ACROSS KENYA
             </p>
 
-            <h1>
-              Find a home
-              <br />
-              <span>that fits.</span>
+            <h1 id="home-hero-title">
+              Find a place to call home.
+              <span>Wherever life takes you.</span>
             </h1>
 
             <p className="hero-text">
-              Search rental listings by location, budget and size. Compare the details, then message the landlord or property manager directly.
+              Search rental homes by town, budget and size, then message the landlord or property manager directly. It is free to browse.
             </p>
 
-            <form className="home-search-form" onSubmit={handleHomeSearch}>
+            <form className="home-search-form" onSubmit={handleHomeSearch} role="search">
               <label className="sr-only" htmlFor="home-search">Town or neighbourhood</label>
               <input
                 id="home-search"
                 type="search"
                 value={homeSearch}
                 onChange={(event) => setHomeSearch(event.target.value)}
-                placeholder="Town or neighbourhood"
+                placeholder="Town or area, e.g. Kilimani"
                 autoComplete="off"
               />
               <button type="submit" className="search-btn">Search homes <span aria-hidden="true">→</span></button>
@@ -169,80 +162,16 @@ function Home() {
               <Link to="/register?role=LANDLORD" className="secondary-btn">List a property</Link>
             </div>
 
-            <div className="hero-trust">
-
-              <div>
-                <strong>✓</strong>
-                Verification status shown
-              </div>
-
-              <div>
-                <strong>✓</strong>
-                Message the property owner
-              </div>
-
-              <div>
-                <strong>✓</strong>
-                Free to browse
-              </div>
-
-            </div>
+            <ul className="hero-trust">
+              <li><strong aria-hidden="true">✓</strong> Verification status shown</li>
+              <li><strong aria-hidden="true">✓</strong> Message the owner directly</li>
+              <li><strong aria-hidden="true">✓</strong> Free to browse</li>
+            </ul>
 
           </div>
 
-
-          {/* A real listing card keeps homepage claims tied to current inventory. */}
-          <div className="hero-image">
-            {featuredProperty ? (
-              <article className="house-card">
-                <div className="house-placeholder">
-                  {(() => {
-                    const photo = featuredProperty.photos?.find((item) => item.is_primary) || featuredProperty.photos?.[0];
-                    const imageUrl = photo?.image_url
-                      ? (photo.image_url.startsWith("http") ? photo.image_url : `${API_BASE_URL}${photo.image_url}`)
-                      : null;
-                    return imageUrl ? <img src={imageUrl} alt={featuredProperty.title} loading="lazy" /> : <span className="home-image-fallback">No photos added yet</span>;
-                  })()}
-                  {featuredProperty.is_verified && <div className="verified-badge">✓ Verified</div>}
-                  {isPropertyBoostActive(featuredProperty) && <div className="hero-boosted-badge">Boosted listing</div>}
-                </div>
-                <div className="house-info">
-                  <div className="house-card-top">
-                    <div>
-                      <strong>{featuredProperty.title}</strong>
-                      <span>{[featuredProperty.area, featuredProperty.town, featuredProperty.county].filter(Boolean).join(", ") || "Location not provided"}</span>
-                    </div>
-                  </div>
-                  <div className="house-meta">
-                    <span>{getBedroomDisplay(featuredProperty).summary}</span>
-                    <span>{featuredProperty.bathrooms} baths</span>
-                    <span>{featuredProperty.property_type}</span>
-                  </div>
-                  <div className="price">
-                    KSh {Number(featuredProperty.monthly_rent).toLocaleString()}
-                    <small> / month</small>
-                  </div>
-                  <Link to={`/properties/${featuredProperty.id}`} className="view-home-button">View this home →</Link>
-                </div>
-              </article>
-            ) : inventoryState === "loading" || inventoryState === "unavailable" ? (
-              <div className="house-card house-card-empty">
-                <div className="house-placeholder"><span aria-hidden="true">N</span></div>
-                <div className="house-info">
-                  <div className="house-card-top"><div><strong>{inventoryState === "loading" ? "Loading current listings" : "Listings are temporarily unavailable"}</strong><span>{inventoryState === "loading" ? "Checking available rentals" : "Please browse homes or try again shortly"}</span></div></div>
-                  {inventoryState === "unavailable" && <Link to="/properties" className="view-home-button">Browse homes →</Link>}
-                </div>
-              </div>
-            ) : (
-              <div className="house-card">
-                <div className="house-placeholder"><span>🏡</span></div>
-                <div className="house-info">
-                  <div className="house-card-top"><div><strong>List your home on NyumbaDirect</strong><span>Connect with house hunters directly</span></div></div>
-                  <p>There are no available listings right now. Check back soon or browse again later.</p>
-                  <Link to="/register?role=LANDLORD" className="view-home-button">List a property →</Link>
-                </div>
-              </div>
-            )}
+          <div className="hero-image ga-hero-map">
+            <HeroMap homesListed={listingStats.available} />
           </div>
 
         </section>
@@ -648,6 +577,33 @@ function Home() {
 
           </div>
 
+        </section>
+
+
+        {/* =================================================
+            TRUST AND SAFETY
+            ================================================= */}
+
+        <section className="ga-trust" aria-labelledby="ga-trust-title">
+          <div className="section-heading centered-heading">
+            <p className="eyebrow">TRUST AND SAFETY</p>
+            <h2 id="ga-trust-title">Rent with confidence</h2>
+            <p>A few simple habits keep you safe when you look for a home.</p>
+          </div>
+          <div className="ga-trust-grid">
+            <div className="ga-trust-card">
+              <h3>Look for the Verified badge</h3>
+              <p>It appears only on listings our team has reviewed. Listings without it are not necessarily unsafe, so check them carefully.</p>
+            </div>
+            <div className="ga-trust-card">
+              <h3>See the home first</h3>
+              <p>Visit the property and meet the landlord or property manager before you pay any money.</p>
+            </div>
+            <div className="ga-trust-card">
+              <h3>Pay only for what you have seen</h3>
+              <p>NyumbaDirect never asks you for rent or a deposit by message. Report anything that feels wrong using the Contact page.</p>
+            </div>
+          </div>
         </section>
 
 

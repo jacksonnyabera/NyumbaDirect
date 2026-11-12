@@ -5,39 +5,54 @@
 }
 
 :root {
-  --color-primary: #173B57;
-  --color-primary-interactive: #245675;
-  --color-accent: #F28C28;
+  /* ---------------------------------------------------------------
+     GREEN ACRES design tokens (official palette)
+     Blue = identity/navigation/headings, Green = property & land,
+     Orange = actions & location markers (always with dark text),
+     Cream/Sage/Pale blue = calm supporting surfaces.
+     --------------------------------------------------------------- */
+  --ga-blue: #174A70;
+  --ga-green: #2F855A;
+  --ga-green-text: #276749; /* green for text on light/cream (AA contrast) */
+  --ga-orange: #F28C28;
+  --ga-cream: #F5F3EA;
+  --ga-sage: #DDEBDD;
+  --ga-pale-blue: #E5F0F7;
+  --ga-navy: #17324D;
+
+  --color-primary: var(--ga-blue);
+  --color-primary-interactive: #1F5E8C;
+  --color-accent: var(--ga-orange);
   --color-accent-hover: #D97716;
   --color-background: #FFFFFF;
-  --color-background-soft: #EAF1F5;
+  --color-background-soft: var(--ga-pale-blue);
   --color-surface: #FFFFFF;
-  --color-text: #20313D;
-  --color-text-muted: #687985;
-  --color-text-on-accent: #20313D;
-  --color-border: #D6E0E6;
+  --color-text: var(--ga-navy);
+  --color-text-muted: #55677A;
+  --color-text-on-accent: var(--ga-navy);
+  --color-border: #D3DDD6;
   --color-disabled: #E4E9ED;
-  --color-success: #23845B;
+  --color-success: var(--ga-green);
   --color-warning: #B7791F;
   --color-error: #C43D3D;
-  --color-focus: #245675;
-  --nd-slate-950: #0f172a;
-  --nd-slate-900: #111827;
-  --nd-slate-700: #334155;
-  --nd-slate-500: #64748b;
-  --nd-slate-200: #e2e8f0;
-  --nd-slate-100: #f1f5f9;
+  --color-focus: var(--ga-blue);
+  --nd-slate-950: var(--ga-navy);
+  --nd-slate-900: #1D3550;
+  --nd-slate-700: #3D5166;
+  --nd-slate-500: #5F7184;
+  --nd-slate-200: #D9E2DB;
+  --nd-slate-100: #EEF2EA;
   --nd-sky-500: var(--color-primary);
   --nd-sky-600: var(--color-primary-interactive);
   --nd-teal-600: var(--color-primary);
   --nd-teal-700: var(--color-primary-interactive);
-  --nd-shadow-soft: 0 20px 45px rgba(15, 23, 42, 0.08);
-  --nd-shadow-strong: 0 28px 60px rgba(15, 23, 42, 0.12);
+  --nd-shadow-soft: 0 20px 45px rgba(23, 50, 77, 0.08);
+  --nd-shadow-strong: 0 28px 60px rgba(23, 50, 77, 0.12);
 }
 
 body {
   font-family: Inter, Arial, sans-serif;
-  background: linear-gradient(180deg, #f8fbff 0%, #f8fafc 18%, #f4f7fb 100%);
+  background: var(--ga-cream);
   color: var(--nd-slate-950);
   line-height: 1.5;
 }
