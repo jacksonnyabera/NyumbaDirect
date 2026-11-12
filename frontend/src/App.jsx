@@ -30,6 +30,7 @@ const PublicInfo = lazy(() => import("./pages/PublicInfo"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 import api, { API_BASE_URL } from "./services/api";
 import { getBedroomDisplay, isPropertyBoostActive } from "./utils/propertyDisplay";
+import Icon from "./components/Icon.jsx";
 
 
 /* =========================================================
@@ -132,7 +133,7 @@ function Home() {
           <div className="hero-content ga-hero-copy">
 
             <p className="eyebrow">
-              RENTAL HOMES ACROSS KENYA
+              Rental homes across Kenya
             </p>
 
             <h1 id="home-hero-title">
@@ -163,9 +164,9 @@ function Home() {
             </div>
 
             <ul className="hero-trust">
-              <li><strong aria-hidden="true">✓</strong> Verification status shown</li>
-              <li><strong aria-hidden="true">✓</strong> Message the owner directly</li>
-              <li><strong aria-hidden="true">✓</strong> Free to browse</li>
+              <li><strong aria-hidden="true"><Icon name="check" /></strong> Verification status shown</li>
+              <li><strong aria-hidden="true"><Icon name="check" /></strong> Message the owner directly</li>
+              <li><strong aria-hidden="true"><Icon name="check" /></strong> Free to browse</li>
             </ul>
 
           </div>
@@ -181,7 +182,7 @@ function Home() {
           <div className="home-inventory-inner">
             <div className="home-inventory-heading">
               <div>
-                <p className="eyebrow">HOMES TO EXPLORE</p>
+                <p className="eyebrow">Homes to explore</p>
                 <h2 id="home-inventory-title">Find your next place</h2>
                 <p>Compare real listings by location, layout and monthly rent.</p>
               </div>
@@ -257,7 +258,7 @@ function Home() {
           <div className="section-heading">
 
             <p className="eyebrow">
-              WHY NYUMBADIRECT
+              Why NyumbaDirect
             </p>
 
               <h2>
@@ -276,11 +277,11 @@ function Home() {
             <div className="feature-card">
 
               <div className="feature-icon" aria-hidden="true">
-                01
+                <Icon name="shield" />
               </div>
 
               <h3>
-                Clear Listing Details
+                Clear listing details
               </h3>
 
               <p>
@@ -293,11 +294,11 @@ function Home() {
             <div className="feature-card">
 
               <div className="feature-icon" aria-hidden="true">
-                02
+                <Icon name="message" />
               </div>
 
               <h3>
-                Chat Directly
+                Chat directly
               </h3>
 
               <p>
@@ -310,11 +311,11 @@ function Home() {
             <div className="feature-card">
 
               <div className="feature-icon" aria-hidden="true">
-                03
+                <Icon name="search" />
               </div>
 
               <h3>
-                Smart Search
+                Search that fits
               </h3>
 
               <p>
@@ -336,30 +337,34 @@ function Home() {
 
           <div className="stats-grid">
 
-            <div className="stat-card">
+            {listingStats.available !== 0 && (
+<div className="stat-card">
 
               <span className="stat-number">
                 {listingStats.available === null ? (inventoryState === "unavailable" ? "—" : "…") : listingStats.available.toLocaleString()}
               </span>
 
               <span className="stat-label">
-                Available Homes
+                Available homes
               </span>
 
             </div>
+)}
 
 
-            <div className="stat-card">
+            {listingStats.verified !== 0 && (
+<div className="stat-card">
 
               <span className="stat-number">
                 {listingStats.verified === null ? (inventoryState === "unavailable" ? "—" : "…") : listingStats.verified.toLocaleString()}
               </span>
 
               <span className="stat-label">
-                Verified Listings
+                Verified listings
               </span>
 
             </div>
+)}
 
 
             <div className="stat-card">
@@ -401,7 +406,7 @@ function Home() {
           <div className="section-heading centered-heading">
 
             <p className="eyebrow">
-              POPULAR KENYA LOCATIONS
+              Popular places in Kenya
             </p>
 
             <h2>
@@ -514,7 +519,7 @@ function Home() {
           <div className="section-heading centered-heading">
 
             <p className="eyebrow">
-              HOW IT WORKS
+              How it works
             </p>
 
             <h2>
@@ -581,12 +586,12 @@ function Home() {
 
 
         {/* =================================================
-            TRUST AND SAFETY
+            Trust and safety
             ================================================= */}
 
         <section className="ga-trust" aria-labelledby="ga-trust-title">
           <div className="section-heading centered-heading">
-            <p className="eyebrow">TRUST AND SAFETY</p>
+            <p className="eyebrow">Trust and safety</p>
             <h2 id="ga-trust-title">Rent with confidence</h2>
             <p>A few simple habits keep you safe when you look for a home.</p>
           </div>
@@ -616,7 +621,7 @@ function Home() {
           <div>
 
             <p className="eyebrow">
-              READY TO START?
+              Ready to start?
             </p>
 
             <h2>
@@ -686,7 +691,7 @@ function Home() {
             <div className="footer-trust">
 
               <span>
-                ✓
+                <Icon name="check" />
               </span>
 
               Built for simpler property discovery in Kenya
@@ -762,7 +767,7 @@ function Home() {
             <div className="footer-contact-item">
 
               <span className="footer-contact-icon">
-                ✉
+                <Icon name="mail" />
               </span>
 
               <a href="mailto:supportnyumbadirect@gmail.com">
@@ -775,7 +780,7 @@ function Home() {
             <div className="footer-contact-item">
 
               <span className="footer-contact-icon">
-                🌍
+                <Icon name="globe" />
               </span>
 
               <span>
@@ -788,7 +793,7 @@ function Home() {
             <div className="footer-contact-item">
 
               <span className="footer-contact-icon">
-                🏠
+                <Icon name="home" />
               </span>
 
               <span>
@@ -1499,7 +1504,7 @@ function AIHelpAssistant() {
                         <span>{[property.area, property.town, property.county].filter(Boolean).join(", ")}</span>
                         <span>KSh {Number(property.monthly_rent).toLocaleString()} / month</span>
                         <small>{getBedroomDisplay(property).summary} · View details →</small>
-                        {property.is_verified && <small className="ai-help-verified">✓ Verified listing</small>}
+                        {property.is_verified && <small className="ai-help-verified"><Icon name="check" /> Verified listing</small>}
                       </Link>
                     ))}
                   </div>

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
 import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
+import Icon from "../components/Icon.jsx";
 
 function Properties() {
   const [searchParams] = useSearchParams();
@@ -173,10 +174,6 @@ function Properties() {
         <header className="marketplace-header">
 
           <div className="marketplace-heading">
-
-            <span className="eyebrow">
-              RENTAL MARKETPLACE · KENYA
-            </span>
 
             <h1>
               Find a home
@@ -422,7 +419,7 @@ function Properties() {
           <div className="marketplace-status error-state" role="alert">
 
             <div className="status-icon">
-              ⚠️
+              <Icon name="warning" />
             </div>
 
             <h2>
@@ -456,7 +453,7 @@ function Properties() {
             <div className="marketplace-status">
 
               <div className="status-icon">
-                🏠
+                <Icon name="home" />
               </div>
 
               <h2>
@@ -512,7 +509,7 @@ function Properties() {
                         />
                       ) : (
                         <div className="property-image-placeholder">
-                          <span>🏡</span>
+                          <span><Icon name="home" /></span>
                           <small>
                             No photos added yet
                           </small>
@@ -531,7 +528,7 @@ function Properties() {
 
                         {property.is_verified && (
                           <span className="verified-badge">
-                            ✓ Verified
+                            <Icon name="check" /> Verified
                           </span>
                         )}
 
@@ -561,7 +558,7 @@ function Properties() {
                         aria-pressed={isFavorite}
                         title={isFavorite ? "Remove from saved homes" : "Save this home"}
                       >
-                        {isFavorite ? "♥" : "♡"}
+                        <Icon name="heart" filled={isFavorite} />
                       </button>
 
                     </div>
@@ -591,7 +588,7 @@ function Properties() {
                       </h2>
 
                       <p className="marketplace-location">
-                        <span>📍</span>
+                        <span><Icon name="pin" /></span>
 
                         <span>
                           {[
@@ -607,10 +604,10 @@ function Properties() {
 
                       <div className="marketplace-specs">
 
-                        <span>🛏 {getBedroomDisplay(property).summary}</span>
+                        <span><Icon name="bed" /> {getBedroomDisplay(property).summary}</span>
 
                         <span>
-                          🚿{" "}
+                          <Icon name="bath" />{" "}
                           {property.bathrooms ?? 0}
                           <small>
                             {" "}
@@ -620,7 +617,7 @@ function Properties() {
 
                         {property.deposit && (
                           <span>
-                            💳 Deposit
+                            <Icon name="card" /> Deposit
                           </span>
                         )}
 
@@ -700,7 +697,7 @@ function Properties() {
             <div className="marketplace-trust-strip">
 
               <div>
-                <span>✓</span>
+                <span><Icon name="check" /></span>
 
                 <div>
                   <strong>
@@ -714,7 +711,7 @@ function Properties() {
               </div>
 
               <div>
-                <span>🔒</span>
+                <span><Icon name="lock" /></span>
 
                 <div>
                   <strong>
@@ -728,7 +725,7 @@ function Properties() {
               </div>
 
               <div>
-                <span>💬</span>
+                <span><Icon name="message" /></span>
 
                 <div>
                   <strong>

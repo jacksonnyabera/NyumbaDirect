@@ -268,7 +268,7 @@ function AdminDashboard() {
           </div>
         </section>
         <section className="admin-panel admin-overview-note">
-          <span>ADMIN SESSION</span>
+          <span>Admin session</span>
           <strong>{admin?.full_name || "Administrator"}</strong>
           <p>{admin?.email}</p>
           <StatusPill tone="good">Server role: ADMIN</StatusPill>
@@ -319,7 +319,7 @@ function AdminDashboard() {
   const renderVerification = () => (
     <div className="admin-verification-groups">
       <section className="admin-panel">
-        <div className="admin-panel-heading"><div><span>ACCOUNT REVIEW</span><h3>Account verification requests</h3></div><StatusPill>{data?.accounts?.length || 0} pending</StatusPill></div>
+        <div className="admin-panel-heading"><div><span>Account review</span><h3>Account verification requests</h3></div><StatusPill>{data?.accounts?.length || 0} pending</StatusPill></div>
         {data?.accounts?.length ? data.accounts.map((user) => (
           <article className="admin-review-row" key={`account-${user.id}`}>
             <div><strong>{user.full_name}</strong><span>{user.email} · {user.phone_number}</span><small>{user.role.replaceAll("_", " ")} · Submitted {formatDate(user.verification_submitted_at)}</small>{user.verification_notes && <p>{user.verification_notes}</p>}</div>
@@ -378,7 +378,7 @@ function AdminDashboard() {
         </section>
       ))}
       <section className="admin-panel admin-report-wide">
-        <div className="admin-panel-heading"><div><span>HOUSE-HUNTER INTEREST</span><h3>Most saved properties</h3></div></div>
+        <div className="admin-panel-heading"><div><span>House-hunter interest</span><h3>Most saved properties</h3></div></div>
         {data?.most_saved_properties?.length ? data.most_saved_properties.map((item) => <div className="admin-report-row" key={item.id}><span>{item.title}<small>{item.town || "Location not listed"}</small></span><strong>{item.saves} saves</strong></div>) : <p className="admin-empty">No saved homes recorded yet.</p>}
       </section>
     </div>
@@ -445,7 +445,7 @@ function AdminDashboard() {
 
       <section className="admin-workspace">
         <header className="admin-topbar">
-          <div><span>NYUMBADIRECT / ADMIN</span><h1>{sectionLabel}</h1></div>
+          <div><span>NyumbaDirect admin</span><h1>{sectionLabel}</h1></div>
           <div className="admin-topbar-actions"><Link to="/" target="_blank" rel="noreferrer">View marketplace ↗</Link><button type="button" onClick={refresh} disabled={loading}>{loading ? "Refreshing…" : "Refresh data"}</button></div>
         </header>
 
