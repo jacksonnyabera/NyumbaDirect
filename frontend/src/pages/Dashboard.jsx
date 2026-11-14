@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import api, { API_BASE_URL } from "../services/api";
 import { getBedroomDisplay, isPropertyBoostActive } from "../utils/propertyDisplay";
+import Icon from "../components/Icon.jsx";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -262,7 +263,7 @@ function Dashboard() {
 
                 {user?.is_verified && (
                   <small>
-                    ✓ Verified account
+                    <Icon name="check" /> Verified account
                   </small>
                 )}
               </div>
@@ -270,8 +271,8 @@ function Dashboard() {
 
             <p className="dashboard-eyebrow">
               {isLandlord
-                ? "🏠 PROPERTY MANAGEMENT"
-                : "🔎 HOUSE HUNTING"}
+                ? "Property management"
+                : "House hunting"}
             </p>
 
             <h1>
@@ -300,7 +301,7 @@ function Dashboard() {
         {/* ERROR */}
         {error && (
           <div className="dashboard-error">
-            <span>⚠️</span>
+            <span><Icon name="warning" /></span>
 
             <div>
               <strong>
@@ -317,7 +318,7 @@ function Dashboard() {
           <section className="dashboard-stats">
             <div className="dashboard-stat-card">
               <div className="dashboard-stat-icon">
-                🏠
+                <Icon name="home" />
               </div>
 
               <div>
@@ -333,7 +334,7 @@ function Dashboard() {
 
             <div className="dashboard-stat-card">
               <div className="dashboard-stat-icon">
-                ✓
+                <Icon name="check" />
               </div>
 
               <div>
@@ -349,7 +350,7 @@ function Dashboard() {
 
             <div className="dashboard-stat-card">
               <div className="dashboard-stat-icon">
-                🛡️
+                <Icon name="shield" />
               </div>
 
               <div>
@@ -365,7 +366,7 @@ function Dashboard() {
 
             <div className="dashboard-stat-card">
               <div className="dashboard-stat-icon">
-                💬
+                <Icon name="message" />
               </div>
 
               <div>
@@ -386,7 +387,7 @@ function Dashboard() {
           <section className="dashboard-stats dashboard-hunter-stats">
             <div className="dashboard-stat-card">
               <div className="dashboard-stat-icon">
-                🔎
+                <Icon name="search" />
               </div>
 
               <div>
@@ -402,7 +403,7 @@ function Dashboard() {
 
             <div className="dashboard-stat-card">
               <div className="dashboard-stat-icon">
-                💬
+                <Icon name="message" />
               </div>
 
               <div>
@@ -418,7 +419,7 @@ function Dashboard() {
 
             <div className="dashboard-stat-card">
               <div className="dashboard-stat-icon">
-                🤝
+                <Icon name="users" />
               </div>
 
               <div>
@@ -438,17 +439,10 @@ function Dashboard() {
         <section className="dashboard-section">
           <div className="dashboard-section-heading">
             <div>
-              <span className="section-label">
-                GET STARTED
-              </span>
 
               <h2>
-                Quick Actions
+                Quick actions
               </h2>
-
-              <p>
-                Everything you need is just one click away.
-              </p>
             </div>
           </div>
 
@@ -458,7 +452,7 @@ function Dashboard() {
               className="dashboard-action-card"
             >
               <div className="dashboard-action-icon">
-                🔎
+                <Icon name="search" />
               </div>
 
               <div>
@@ -472,7 +466,7 @@ function Dashboard() {
               </div>
 
               <span className="dashboard-action-arrow">
-                →
+                <Icon name="forward" />
               </span>
             </Link>
 
@@ -481,7 +475,7 @@ function Dashboard() {
               className="dashboard-action-card"
             >
               <div className="dashboard-action-icon">
-                💬
+                <Icon name="message" />
               </div>
 
               <div>
@@ -495,7 +489,7 @@ function Dashboard() {
               </div>
 
               <span className="dashboard-action-arrow">
-                →
+                <Icon name="forward" />
               </span>
             </Link>
 
@@ -505,7 +499,7 @@ function Dashboard() {
                 className="dashboard-action-card"
               >
                 <div className="dashboard-action-icon">
-                  ➕
+                  <Icon name="plus" />
                 </div>
 
                 <div>
@@ -519,7 +513,7 @@ function Dashboard() {
                 </div>
 
                 <span className="dashboard-action-arrow">
-                  →
+                  <Icon name="forward" />
                 </span>
               </Link>
             )}
@@ -531,12 +525,9 @@ function Dashboard() {
           <section className="dashboard-section">
             <div className="dashboard-section-heading">
               <div>
-                <span className="section-label">
-                  MANAGEMENT
-                </span>
 
                 <h2>
-                  Your Properties
+                  Your properties
                 </h2>
 
                 <p>
@@ -600,7 +591,7 @@ function Dashboard() {
             {properties.length === 0 ? (
               <div className="dashboard-empty-state">
                 <div className="dashboard-empty-icon">
-                  🏠
+                  <Icon name="home" />
                 </div>
 
                 <h2>
@@ -637,7 +628,7 @@ function Dashboard() {
                           />
                         ) : (
                           <div className="dashboard-property-placeholder">
-                            🏡
+                            <Icon name="home" />
                           </div>
                         )}
 
@@ -655,13 +646,13 @@ function Dashboard() {
 
                         {property.is_verified && (
                           <span className="dashboard-property-verified">
-                            ✓ Verified
+                            <Icon name="check" /> Verified
                           </span>
                         )}
 
                         {isPropertyBoostActive(property) && (
                           <span className="dashboard-property-featured">
-                            🚀 Featured
+                            <Icon name="trend" /> Featured
                           </span>
                         )}
                       </div>
@@ -678,7 +669,7 @@ function Dashboard() {
                         </h3>
 
                         <p className="dashboard-property-location">
-                          📍 {formatLocation(property)}
+                          <Icon name="pin" /> {formatLocation(property)}
                         </p>
 
                         {!property.is_available && (
@@ -688,10 +679,10 @@ function Dashboard() {
                         )}
 
                         <div className="dashboard-property-features">
-                          <span>🛏 {getBedroomDisplay(property).summary}</span>
+                          <span><Icon name="bed" /> {getBedroomDisplay(property).summary}</span>
 
                           <span>
-                            🚿{" "}
+                            <Icon name="bath" />{" "}
                             {property.bathrooms ?? 0} Baths
                           </span>
                         </div>
@@ -756,7 +747,7 @@ function Dashboard() {
                                )
                              }
                           >
-                             🚀 Boost
+                             <Icon name="trend" /> Boost
                           </button>
 
                           <button
@@ -785,9 +776,6 @@ function Dashboard() {
         <section className="dashboard-section">
           <div className="dashboard-section-heading">
             <div>
-              <span className="section-label">
-                COMMUNICATION
-              </span>
 
               <h2>
                 Recent Conversations
@@ -802,14 +790,14 @@ function Dashboard() {
               to="/messages"
               className="dashboard-section-link"
             >
-              View All →
+              View All
             </Link>
           </div>
 
           {conversations.length === 0 ? (
             <div className="dashboard-empty-state dashboard-empty-small">
               <div className="dashboard-empty-icon">
-                💬
+                <Icon name="message" />
               </div>
 
               <h2>
@@ -874,7 +862,7 @@ function Dashboard() {
                         </span>
 
                         <strong>
-                          →
+                          <Icon name="forward" />
                         </strong>
                       </div>
                     </Link>
@@ -888,9 +876,6 @@ function Dashboard() {
   <section className="dashboard-verification-card">
     <div className="dashboard-verification-header">
       <div>
-        <span className="section-label">
-          ACCOUNT VERIFICATION
-        </span>
 
         <h2>
           {verification?.is_verified
@@ -910,10 +895,10 @@ function Dashboard() {
         }`}
       >
         {verification?.is_verified
-          ? "✓"
+          ? <Icon name="check" />
           : verification?.verification_status ===
             "PENDING"
-          ? "⏳"
+          ? <Icon name="clock" />
           : "!"}
       </div>
     </div>
@@ -921,7 +906,7 @@ function Dashboard() {
     {verification?.is_verified ? (
       <div className="verification-success">
         <strong>
-          ✓ Verified Landlord / Property Manager
+          <Icon name="check" /> Verified Landlord / Property Manager
         </strong>
 
         <p>
@@ -1042,13 +1027,10 @@ function Dashboard() {
         {/* ACCOUNT OVERVIEW */}
         <section className="dashboard-account-card">
           <div className="dashboard-account-icon">
-            👤
+            <Icon name="user" />
           </div>
 
           <div className="dashboard-account-info">
-            <span className="section-label">
-              ACCOUNT
-            </span>
 
             <h2>
               {user?.full_name || "Your Account"}
@@ -1065,7 +1047,7 @@ function Dashboard() {
 
               {user?.is_verified ? (
                 <span className="account-verified">
-                  ✓ Verified
+                  <Icon name="check" /> Verified
                 </span>
               ) : (
                 <span className="account-unverified">
@@ -1079,7 +1061,7 @@ function Dashboard() {
             to="/"
             className="dashboard-account-link"
           >
-            Back to Home →
+            Back to Home
           </Link>
         </section>
       </main>

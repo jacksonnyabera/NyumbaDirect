@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 function Conversations() {
   const [user, setUser] = useState(null);
@@ -241,13 +242,13 @@ const formatDate = (dateString) => {
             to="/properties"
             className="conversations-browse-button"
           >
-            🔎 Browse Properties
+            <Icon name="search" /> Browse Properties
           </Link>
         </section>
 
         {!isLandlord && (
           <div className="conversation-ai-notice">
-            <span className="conversation-ai-icon">🤖</span>
+            <span className="conversation-ai-icon"><Icon name="sparkle" /></span>
             <div>
               <strong>NyumbaDirect AI assistance</strong>
               <p>
@@ -262,7 +263,7 @@ const formatDate = (dateString) => {
 
         {error && (
           <div className="conversations-error">
-            <span>⚠️</span>
+            <span><Icon name="warning" /></span>
             <div>
               <strong>Something went wrong</strong>
               <p>{error}</p>
@@ -285,7 +286,7 @@ const formatDate = (dateString) => {
 
           {conversations.length === 0 ? (
             <div className="conversations-empty">
-              <div className="conversations-empty-icon">💬</div>
+              <div className="conversations-empty-icon"><Icon name="message" /></div>
               <h2>No conversations yet</h2>
               <p>
                 {isLandlord
@@ -329,11 +330,11 @@ const formatDate = (dateString) => {
                       </div>
 
                       <div className="conversation-property">
-                        🏠 {getPropertyTitle(conversation)}
+                        <Icon name="home" /> {getPropertyTitle(conversation)}
                       </div>
 
                       <div className="conversation-location">
-                        📍 {getPropertyLocation(conversation)}
+                        <Icon name="pin" /> {getPropertyLocation(conversation)}
                       </div>
 
                       <div className="conversation-role">
@@ -348,7 +349,7 @@ const formatDate = (dateString) => {
 
                       {!isLandlord && contact.phone_number && (
                         <div className="conversation-phone">
-                          📞 {contact.phone_number}
+                          <Icon name="phone" /> {contact.phone_number}
                         </div>
                       )}
 
@@ -359,7 +360,7 @@ const formatDate = (dateString) => {
                       )}
                     </div>
 
-                    <div className="conversation-arrow">→</div>
+                    <div className="conversation-arrow"><Icon name="forward" /></div>
                   </Link>
                 );
               })}

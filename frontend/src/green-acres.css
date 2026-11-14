@@ -565,3 +565,100 @@ input[type="radio"] {
 .nd-brand {
   min-height: 44px;
 }
+
+/* ---------- Production polish ---------- */
+
+/* Icons: inline SVG replaces emoji. Sized from the surrounding text. */
+.ga-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+/* Labels read as plain sentence-case text, not shouting small caps. */
+.eyebrow,
+.dashboard-eyebrow,
+.messages-eyebrow,
+.boost-eyebrow,
+.public-info-kicker,
+.details-review-kicker,
+.home-listing-kicker,
+.ai-help-kicker,
+.property-type,
+.property-type-label,
+.dashboard-property-type,
+.details-property-type,
+.saved-home-type,
+.stat-label,
+.city-chip,
+.admin-settings-panel h4,
+.admin-user-details span {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.eyebrow,
+.dashboard-eyebrow,
+.messages-eyebrow,
+.boost-eyebrow,
+.public-info-kicker,
+.details-review-kicker,
+.home-listing-kicker {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ga-green, #1f6b3a);
+}
+
+.property-type,
+.property-type-label,
+.dashboard-property-type,
+.details-property-type,
+.saved-home-type {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #5b6b66);
+}
+
+/* Skip link stays fully off-screen until focused. */
+.nd-skip-link {
+  position: fixed;
+  top: 8px;
+  left: -9999px;
+  transform: none;
+}
+.nd-skip-link:focus {
+  left: 8px;
+}
+
+/* Favourite hearts: filled when saved. */
+.favorite-button .ga-icon,
+.details-favorite-button .ga-icon,
+.saved-home-remove .ga-icon {
+  width: 1.3em;
+  height: 1.3em;
+}
+.favorite-button.favorite-active .ga-icon,
+.details-favorite-button.favorite-active .ga-icon {
+  color: #c2410c;
+}
+
+.details-review-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--ga-orange, #f28c28);
+}
+
+/* Header: every link shares one weight, size and 44px target. */
+.nd-nav-message,
+.nd-navigation-links a,
+.nd-nav-logout,
+.nd-nav-login {
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.nd-nav-message { color: #475569; }
+.nd-nav-message:hover { color: var(--color-primary); }

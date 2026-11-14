@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -45,7 +46,7 @@ export default function ForgotPassword() {
             {loading ? "Sending…" : "Send reset link"}
           </button>
         </form>
-        <Link className="auth-back" to="/login">← Back to login</Link>
+        <Link className="auth-back" to="/login"><Icon name="back" /> Back to login</Link>
       </section>
     </main>
   );
