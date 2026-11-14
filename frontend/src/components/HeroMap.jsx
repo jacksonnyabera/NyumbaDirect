@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
+import Icon from "../components/Icon.jsx";
 
 // The map is a separate chunk so it never blocks search or first paint.
 const WorldMap = lazy(() => import("./WorldMap"));
@@ -58,7 +59,7 @@ export default function HeroMap({ homesListed }) {
             we only list homes where we operate today.
           </p>
           <Link to="/properties" className="ga-map-caption-link">
-            Browse homes in Kenya <span aria-hidden="true">→</span>
+            Browse homes in Kenya
           </Link>
         </div>
       </figcaption>

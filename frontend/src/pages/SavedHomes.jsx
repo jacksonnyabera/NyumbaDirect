@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import api, { API_BASE_URL } from "../services/api";
 import useFavorites from "../hooks/useFavorites";
 import { getBedroomDisplay } from "../utils/propertyDisplay";
+import Icon from "../components/Icon.jsx";
 
 function SavedHomes() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const { favoriteIds, toggleFavorite, clearFavorites, error: favoritesError } = useFavorites();
 
-  const navigate = useNavigate();
 
   const loadSavedHomes = useCallback(async () => {
     try {
@@ -120,57 +121,13 @@ function SavedHomes() {
       : "Location not specified";
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(
-      "access_token"
-    );
-
-    localStorage.removeItem("user_id");
-
-    navigate("/login");
-  };
 
   return (
     <div className="saved-homes-page">
 
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
-        </Link>
+      <Navigation />
 
-        <div className="nav-links">
-          <Link to="/">Home</Link>
-
-          <Link to="/properties">
-            Properties
-          </Link>
-
-          <Link to="/dashboard">
-            Dashboard
-          </Link>
-
-          <Link
-            to="/saved-homes"
-            className="active-nav-link"
-          >
-            Saved Homes
-          </Link>
-
-          <Link to="/messages">
-            Messages
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="logout-btn"
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
-
-      <main className="saved-homes-container">
+      <main id="main-content" tabIndex="-1" className="saved-homes-container">
 
         <section className="saved-homes-header">
 
@@ -192,7 +149,7 @@ function SavedHomes() {
             to="/properties"
             className="saved-browse-button"
           >
-            🔎 Find More Homes
+            <Icon name="search" /> Find More Homes
           </Link>
 
         </section>
@@ -215,7 +172,7 @@ function SavedHomes() {
           <section className="saved-homes-empty">
 
             <div className="saved-homes-empty-icon">
-              ♡
+              <Icon name="heart" />
             </div>
 
             <h2>
@@ -280,13 +237,13 @@ function SavedHomes() {
                         />
                       ) : (
                         <div className="saved-home-placeholder">
-                          🏡
+                          <Icon name="home" />
                         </div>
                       )}
 
                       {property.is_verified && (
                         <span className="saved-verified-badge">
-                          ✓ Verified
+                          <Icon name="check" /> Verified
                         </span>
                       )}
 
@@ -301,7 +258,7 @@ function SavedHomes() {
                         aria-label="Remove saved home"
                         title="Remove saved home"
                       >
-                        ♥
+                        <Icon name="heart" filled />
                       </button>
 
                     </div>
@@ -319,17 +276,17 @@ function SavedHomes() {
                       </h2>
 
                       <p className="saved-home-location">
-                        📍{" "}
+                        <Icon name="pin" />{" "}
                         {formatLocation(
                           property
                         )}
                       </p>
 
                       <div className="saved-home-features">
-                        <span>🛏 {getBedroomDisplay(property).summary}</span>
+                        <span><Icon name="bed" /> {getBedroomDisplay(property).summary}</span>
 
                         <span>
-                          🚿{" "}
+                          <Icon name="bath" />{" "}
                           {property.bathrooms ?? 0}{" "}
                           Baths
                         </span>
@@ -355,7 +312,7 @@ function SavedHomes() {
                           to={`/properties/${property.id}`}
                           className="saved-view-button"
                         >
-                          View Home →
+                          View Home
                         </Link>
 
                       </div>

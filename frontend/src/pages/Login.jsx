@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -204,7 +205,7 @@ function Login() {
         </p>
 
         <Link className="auth-back" to="/">
-          ← Back to home
+          <Icon name="back" /> Back to home
         </Link>
       </div>
     </div>

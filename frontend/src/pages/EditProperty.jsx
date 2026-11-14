@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import api, { API_BASE_URL } from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 function EditProperty() {
   const { propertyId } = useParams();
@@ -297,28 +299,14 @@ function EditProperty() {
   return (
     <div className="add-property-page">
 
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Nyumba<span>Direct</span>
-        </Link>
+      <Navigation />
 
-        <div className="nav-links">
-          <Link to="/dashboard">
-            Dashboard
-          </Link>
-
-          <Link to="/properties">
-            Properties
-          </Link>
-        </div>
-      </nav>
-
-      <main className="add-property-container">
+      <main id="main-content" tabIndex="-1" className="add-property-container">
 
         <div className="form-header">
 
           <p className="eyebrow">
-            🏠 NYUMBADIRECT
+            NyumbaDirect
           </p>
 
           <h1>
@@ -640,7 +628,7 @@ function EditProperty() {
 
             <div>
               <p className="eyebrow">
-                📸 PROPERTY PHOTOS
+                <Icon name="camera" /> Property photos
               </p>
 
               <h2>
@@ -674,7 +662,7 @@ function EditProperty() {
               htmlFor="property-photo-input"
               className="photo-file-label"
             >
-              📷 Choose Photos
+              <Icon name="camera" /> Choose Photos
             </label>
 
             <input
@@ -731,7 +719,7 @@ function EditProperty() {
             <div className="photo-empty-state">
 
               <div>
-                📷
+                <Icon name="camera" />
               </div>
 
               <h3>
@@ -766,7 +754,7 @@ function EditProperty() {
 
                   {photo.is_primary && (
                     <span className="primary-photo-badge">
-                      ⭐ Primary
+                      <Icon name="star" /> Primary
                     </span>
                   )}
 
@@ -777,7 +765,7 @@ function EditProperty() {
                       handleDeletePhoto(photo.id)
                     }
                   >
-                    🗑 Delete
+                    <Icon name="trash" /> Delete
                   </button>
 
                 </div>

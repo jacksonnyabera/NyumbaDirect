@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 function Register() {
   const [searchParams] = useSearchParams();
@@ -134,7 +135,7 @@ function Register() {
           </div>
 
           <div className="auth-form-note">
-            Your account will be created immediately. You can verify your profile later from your account settings.
+            We will email you a verification code to confirm your address. Check your inbox (and spam folder) after you sign up.
           </div>
 
           <div className="form-grid">
@@ -206,7 +207,7 @@ function Register() {
         </p>
 
         <Link className="auth-back" to="/">
-          ← Back to home
+          <Icon name="back" /> Back to home
         </Link>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../services/api";
+import Icon from "../components/Icon.jsx";
 
 function Messages() {
   const { conversationId } = useParams();
@@ -328,11 +329,11 @@ function Messages() {
               to="/messages"
               className="back-link"
             >
-             ← Back to messages
+             <Icon name="back" /> Back to messages
             </Link>
 
             <span className="messages-eyebrow">
-              PROPERTY CONVERSATION
+              Property conversation
             </span>
 
             <h1>{propertyTitle}</h1>
@@ -347,14 +348,14 @@ function Messages() {
               href={`tel:${contact.phone_number}`}
               className="messages-call-button"
             >
-              📞 Call {contactLabel}
+              <Icon name="phone" /> Call {contactLabel}
             </a>
           )}
         </div>
 
         {isHouseHunter && (
           <div className="messages-contact-notice">
-            <div className="messages-contact-icon">📞</div>
+            <div className="messages-contact-icon"><Icon name="phone" /></div>
             <div>
               <strong>
                 Need a quick confirmation?
@@ -379,7 +380,7 @@ function Messages() {
 
         {!isHouseHunter && (
           <div className="messages-landlord-notice">
-            <strong>🏠 House hunter inquiry</strong>
+            <strong><Icon name="home" /> House hunter inquiry</strong>
             <p>
               Reply directly to the house hunter about this property.
               Keep availability, pricing and viewing information accurate.
@@ -388,7 +389,7 @@ function Messages() {
         )}
           {isHouseHunter && aiAvailable && (
           <div className="messages-ai-notice">
-            <span>🤖</span>
+            <span><Icon name="sparkle" /></span>
             <div>
               <strong>NyumbaDirect AI may assist</strong>
               <p>
@@ -435,7 +436,7 @@ function Messages() {
 
             ) : messages.length === 0 ? (
               <div className="messages-status">
-                <div className="empty-message-icon">💬</div>
+                <div className="empty-message-icon"><Icon name="message" /></div>
                 <h2>Start the conversation</h2>
                 <p>
                   Send the {isHouseHunter ? "landlord or property manager" : "house hunter"} a message about this property.
@@ -465,14 +466,14 @@ function Messages() {
                              isAi ? "message-avatar-ai" : ""
                         }`}
                       >
-                        {isAi ? "🤖" : "👤"}
+                        <Icon name={isAi ? "sparkle" : "user"} />
                       </div>
                     )}
 
                     <div className="message-content">
                       {isAi && (
                         <div className="message-sender-label">
-                          🤖 NyumbaDirect AI
+                          <Icon name="sparkle" /> NyumbaDirect AI
                         </div>
                       )}
 
@@ -507,7 +508,7 @@ function Messages() {
                     </div>
 
                     {isMine && (
-                      <div className="message-avatar">👤</div>
+                      <div className="message-avatar"><Icon name="user" /></div>
                     )}
                   </div>
                 );
@@ -522,13 +523,13 @@ function Messages() {
                 onClick={useInquiryTemplate}
                 disabled={sending}
               >
-                ✉️ Use inquiry template
+                <Icon name="mail" /> Use inquiry template
               </button>
             )}
 
             {contact?.phone_number && (
               <a href={`tel:${contact.phone_number}`}>
-                📞 Call {contactLabel}
+                <Icon name="phone" /> Call {contactLabel}
               </a>
             )}
           </div>
